@@ -11,11 +11,11 @@
         body {
             margin: 0;
             padding: 0;
-            font-family: 'IBM Plex Mono', 'Courier New', monospace;
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
         }
         #root {
             width: 100%;
-            height: 100vh;
+            min-height: 100vh;
         }
     </style>
 </head>
@@ -286,34 +286,32 @@
             return (
                 <div style={{
                     minHeight: '100vh',
-                    background: 'linear-gradient(165deg, #0a1128 0%, #1c2541 50%, #2d3561 100%)',
-                    fontFamily: '"IBM Plex Mono", "Courier New", monospace',
-                    color: '#e8f1f5',
+                    background: '#f5f4f0',
+                    fontFamily: '"Segoe UI", "Helvetica Neue", Arial, sans-serif',
+                    color: '#000',
                     padding: '0',
                     margin: '0',
                 }}>
                     <div style={{
-                        background: 'linear-gradient(90deg, #001f54 0%, #034078 100%)',
-                        borderBottom: '3px solid #ffc857',
+                        background: '#000',
+                        borderBottom: '4px solid #dec55b',
                         padding: '1.5rem 2rem',
-                        boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
                     }}>
                         <h1 style={{
                             margin: '0',
                             fontSize: '2rem',
                             fontWeight: '700',
-                            letterSpacing: '0.05em',
-                            color: '#ffc857',
-                            textTransform: 'uppercase',
-                            textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+                            letterSpacing: '0.02em',
+                            color: '#fff',
                         }}>
                             Dam Stability Analyzer
                         </h1>
                         <p style={{
                             margin: '0.5rem 0 0 0',
                             fontSize: '0.9rem',
-                            color: '#8ecae6',
-                            letterSpacing: '0.03em',
+                            color: '#a5a5a8',
+                            letterSpacing: '0.02em',
                         }}>
                             Norwegian Dam Safety Standard (NVE) · Gravity Dam Analysis
                         </p>
@@ -328,12 +326,11 @@
                         gap: '2rem',
                     }}>
                         <div style={{
-                            background: 'rgba(28, 37, 65, 0.7)',
-                            backdropFilter: 'blur(10px)',
-                            borderRadius: '12px',
-                            border: '2px solid rgba(142, 202, 230, 0.3)',
+                            background: '#fff',
+                            borderRadius: '8px',
+                            border: '1px solid #e2e0da',
                             padding: '2rem',
-                            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                         }}>
                             <div style={{
                                 display: 'flex',
@@ -344,10 +341,10 @@
                                 <h2 style={{
                                     margin: '0',
                                     fontSize: '1.3rem',
-                                    color: '#8ecae6',
-                                    borderBottom: '2px solid #ffc857',
+                                    color: '#000',
+                                    borderBottom: '3px solid #dec55b',
                                     paddingBottom: '0.5rem',
-                                    letterSpacing: '0.05em',
+                                    letterSpacing: '0.02em',
                                     flex: 1,
                                 }}>
                                     DAM VISUALIZATION
@@ -357,37 +354,36 @@
                                     disabled={!results}
                                     style={{
                                         padding: '0.7rem 1.5rem',
-                                        background: results ? 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)' : '#666',
+                                        background: results ? '#4d535a' : '#a5a5a8',
                                         color: '#fff',
                                         border: 'none',
-                                        borderRadius: '6px',
+                                        borderRadius: '9999px',
                                         fontSize: '0.9rem',
                                         fontWeight: '600',
                                         cursor: results ? 'pointer' : 'not-allowed',
                                         transition: 'all 0.2s',
-                                        boxShadow: results ? '0 4px 12px rgba(34, 197, 94, 0.3)' : 'none',
+                                        boxShadow: results ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
                                         fontFamily: 'inherit',
-                                        letterSpacing: '0.03em',
+                                        letterSpacing: '0.02em',
                                     }}
                                     onMouseEnter={(e) => {
                                         if (results) {
-                                            e.target.style.transform = 'translateY(-2px)';
-                                            e.target.style.boxShadow = '0 6px 16px rgba(34, 197, 94, 0.4)';
+                                            e.target.style.background = '#000';
+                                            e.target.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)';
                                         }
                                     }}
                                     onMouseLeave={(e) => {
-                                        e.target.style.transform = 'translateY(0)';
-                                        e.target.style.boxShadow = results ? '0 4px 12px rgba(34, 197, 94, 0.3)' : 'none';
+                                        e.target.style.background = results ? '#4d535a' : '#a5a5a8';
+                                        e.target.style.boxShadow = results ? '0 2px 6px rgba(0,0,0,0.15)' : 'none';
                                     }}
                                 >
-                                    📊 Export to Excel
+                                    Export to CSV
                                 </button>
                             </div>
                             <p style={{
                                 fontSize: '0.85rem',
-                                color: '#8ecae6',
+                                color: '#4d535a',
                                 marginBottom: '1rem',
-                                opacity: 0.8,
                             }}>
                                 Click and drag on the geometry to adjust dimensions
                             </p>
@@ -397,9 +393,9 @@
                                 width={SVG_WIDTH}
                                 height={SVG_HEIGHT}
                                 style={{
-                                    background: 'linear-gradient(to bottom, #87ceeb 0%, #4a90a4 50%, #2d5a6b 100%)',
+                                    background: 'linear-gradient(to bottom, #c0d4fd 0%, #8aa3b9 60%, #7e8dab 100%)',
                                     borderRadius: '8px',
-                                    border: '2px solid rgba(142, 202, 230, 0.4)',
+                                    border: '1px solid #e2e0da',
                                     cursor: dragging ? 'grabbing' : 'default',
                                     display: 'block',
                                     margin: '0 auto',
@@ -409,43 +405,43 @@
                                 
                                 <rect x="0" y={GROUND_Y - waterHeight} width={BASE_X} height={waterHeight} fill="url(#waterGradient)" opacity="0.7" />
                                 
-                                <line x1="0" y1={GROUND_Y - waterHeight} x2={BASE_X} y2={GROUND_Y - waterHeight} stroke="#00d4ff" strokeWidth="3" strokeDasharray="5,5" />
-                                <circle cx={BASE_X / 2} cy={GROUND_Y - waterHeight} r="8" fill="#ffc857" stroke="#fff" strokeWidth="2" style={{ cursor: 'ns-resize' }} onMouseDown={() => handleMouseDown('waterDepth')} />
+                                <line x1="0" y1={GROUND_Y - waterHeight} x2={BASE_X} y2={GROUND_Y - waterHeight} stroke="#8aa3b9" strokeWidth="3" strokeDasharray="5,5" />
+                                <circle cx={BASE_X / 2} cy={GROUND_Y - waterHeight} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ns-resize' }} onMouseDown={() => handleMouseDown('waterDepth')} />
                                 <text x={BASE_X / 2} y={GROUND_Y - waterHeight - 12} fill="#fff" fontSize="11" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>
                                     {inputs.waterDepth.toFixed(1)}m
                                 </text>
 
                                 <polygon points={damPoints.map(p => `${p.x},${p.y}`).join(' ')} fill="url(#concreteGradient)" stroke="#555" strokeWidth="2" />
 
-                                <line x1={BASE_X} y1={GROUND_Y} x2={BASE_X} y2={GROUND_Y - damHeight} stroke="#ffc857" strokeWidth="2" strokeDasharray="4,4" />
-                                <circle cx={BASE_X} cy={GROUND_Y - damHeight} r="8" fill="#ffc857" stroke="#fff" strokeWidth="2" style={{ cursor: 'ns-resize' }} onMouseDown={() => handleMouseDown('damHeight')} />
-                                <text x={BASE_X - 15} y={GROUND_Y - damHeight / 2} fill="#ffc857" fontSize="11" fontWeight="bold" textAnchor="end" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                <line x1={BASE_X} y1={GROUND_Y} x2={BASE_X} y2={GROUND_Y - damHeight} stroke="#dec55b" strokeWidth="2" strokeDasharray="4,4" />
+                                <circle cx={BASE_X} cy={GROUND_Y - damHeight} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ns-resize' }} onMouseDown={() => handleMouseDown('damHeight')} />
+                                <text x={BASE_X - 15} y={GROUND_Y - damHeight / 2} fill="#dec55b" fontSize="11" fontWeight="bold" textAnchor="end" style={{ pointerEvents: 'none', userSelect: 'none' }}>
                                     H={inputs.damHeight.toFixed(1)}m
                                 </text>
 
                                 {/* Dam top width indicator */}
-                                <line x1={BASE_X} y1={GROUND_Y - damHeight - 15} x2={BASE_X + damTopWidth} y2={GROUND_Y - damHeight - 15} stroke="#ffc857" strokeWidth="2" />
-                                <line x1={BASE_X} y1={GROUND_Y - damHeight - 20} x2={BASE_X} y2={GROUND_Y - damHeight - 10} stroke="#ffc857" strokeWidth="2" />
-                                <line x1={BASE_X + damTopWidth} y1={GROUND_Y - damHeight - 20} x2={BASE_X + damTopWidth} y2={GROUND_Y - damHeight - 10} stroke="#ffc857" strokeWidth="2" />
-                                <circle cx={BASE_X + damTopWidth} cy={GROUND_Y - damHeight - 15} r="8" fill="#ffc857" stroke="#fff" strokeWidth="2" style={{ cursor: 'ew-resize' }} onMouseDown={() => handleMouseDown('damTopWidth')} />
-                                <text x={BASE_X + damTopWidth / 2} y={GROUND_Y - damHeight - 22} fill="#ffc857" fontSize="11" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                <line x1={BASE_X} y1={GROUND_Y - damHeight - 15} x2={BASE_X + damTopWidth} y2={GROUND_Y - damHeight - 15} stroke="#dec55b" strokeWidth="2" />
+                                <line x1={BASE_X} y1={GROUND_Y - damHeight - 20} x2={BASE_X} y2={GROUND_Y - damHeight - 10} stroke="#dec55b" strokeWidth="2" />
+                                <line x1={BASE_X + damTopWidth} y1={GROUND_Y - damHeight - 20} x2={BASE_X + damTopWidth} y2={GROUND_Y - damHeight - 10} stroke="#dec55b" strokeWidth="2" />
+                                <circle cx={BASE_X + damTopWidth} cy={GROUND_Y - damHeight - 15} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ew-resize' }} onMouseDown={() => handleMouseDown('damTopWidth')} />
+                                <text x={BASE_X + damTopWidth / 2} y={GROUND_Y - damHeight - 22} fill="#dec55b" fontSize="11" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>
                                     Wt={inputs.damTopWidth.toFixed(1)}m
                                 </text>
 
                                 {/* Dam base width indicator (draggable) */}
-                                <line x1={BASE_X} y1={GROUND_Y + 15} x2={BASE_X + damBaseWidth} y2={GROUND_Y + 15} stroke="#ffc857" strokeWidth="2" />
-                                <line x1={BASE_X} y1={GROUND_Y + 10} x2={BASE_X} y2={GROUND_Y + 20} stroke="#ffc857" strokeWidth="2" />
-                                <line x1={BASE_X + damBaseWidth} y1={GROUND_Y + 10} x2={BASE_X + damBaseWidth} y2={GROUND_Y + 20} stroke="#ffc857" strokeWidth="2" />
-                                <circle cx={BASE_X + damBaseWidth} cy={GROUND_Y + 15} r="8" fill="#ffc857" stroke="#fff" strokeWidth="2" style={{ cursor: 'ew-resize' }} onMouseDown={() => handleMouseDown('damBaseWidth')} />
-                                <text x={BASE_X + damBaseWidth / 2} y={GROUND_Y + 35} fill="#ffc857" fontSize="11" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                <line x1={BASE_X} y1={GROUND_Y + 15} x2={BASE_X + damBaseWidth} y2={GROUND_Y + 15} stroke="#dec55b" strokeWidth="2" />
+                                <line x1={BASE_X} y1={GROUND_Y + 10} x2={BASE_X} y2={GROUND_Y + 20} stroke="#dec55b" strokeWidth="2" />
+                                <line x1={BASE_X + damBaseWidth} y1={GROUND_Y + 10} x2={BASE_X + damBaseWidth} y2={GROUND_Y + 20} stroke="#dec55b" strokeWidth="2" />
+                                <circle cx={BASE_X + damBaseWidth} cy={GROUND_Y + 15} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ew-resize' }} onMouseDown={() => handleMouseDown('damBaseWidth')} />
+                                <text x={BASE_X + damBaseWidth / 2} y={GROUND_Y + 35} fill="#dec55b" fontSize="11" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>
                                     Wb={inputs.damBaseWidth.toFixed(1)}m
                                 </text>
 
                                 {tailwaterHeight > 0 && (
                                     <>
                                         <rect x={BASE_X + damBaseWidth} y={GROUND_Y - tailwaterHeight} width={SVG_WIDTH - (BASE_X + damBaseWidth)} height={tailwaterHeight} fill="url(#waterGradient)" opacity="0.5" />
-                                        <line x1={BASE_X + damBaseWidth} y1={GROUND_Y - tailwaterHeight} x2={SVG_WIDTH} y2={GROUND_Y - tailwaterHeight} stroke="#00d4ff" strokeWidth="2" strokeDasharray="5,5" />
-                                        <circle cx={BASE_X + damBaseWidth + 40} cy={GROUND_Y - tailwaterHeight} r="7" fill="#ffc857" stroke="#fff" strokeWidth="2" style={{ cursor: 'ns-resize' }} onMouseDown={() => handleMouseDown('tailwater')} />
+                                        <line x1={BASE_X + damBaseWidth} y1={GROUND_Y - tailwaterHeight} x2={SVG_WIDTH} y2={GROUND_Y - tailwaterHeight} stroke="#8aa3b9" strokeWidth="2" strokeDasharray="5,5" />
+                                        <circle cx={BASE_X + damBaseWidth + 40} cy={GROUND_Y - tailwaterHeight} r="7" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ns-resize' }} onMouseDown={() => handleMouseDown('tailwater')} />
                                         <text x={BASE_X + damBaseWidth + 40} y={GROUND_Y - tailwaterHeight - 12} fill="#fff" fontSize="10" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>
                                             {inputs.tailwaterDepth.toFixed(1)}m
                                         </text>
@@ -458,21 +454,21 @@
                                     <>
                                         <defs>
                                             <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                                                <polygon points="0 0, 10 3, 0 6" fill="#ff6b6b" />
+                                                <polygon points="0 0, 10 3, 0 6" fill="#821307" />
                                             </marker>
                                         </defs>
-                                        <line x1={BASE_X - 30} y1={GROUND_Y - waterHeight / 3} x2={BASE_X - 5} y2={GROUND_Y - waterHeight / 3} stroke="#ff6b6b" strokeWidth="3" markerEnd="url(#arrowhead)" />
-                                        <text x={BASE_X - 35} y={GROUND_Y - waterHeight / 3 - 8} fill="#ff6b6b" fontSize="10" fontWeight="bold" textAnchor="end" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                        <line x1={BASE_X - 30} y1={GROUND_Y - waterHeight / 3} x2={BASE_X - 5} y2={GROUND_Y - waterHeight / 3} stroke="#821307" strokeWidth="3" markerEnd="url(#arrowhead)" />
+                                        <text x={BASE_X - 35} y={GROUND_Y - waterHeight / 3 - 8} fill="#821307" fontSize="10" fontWeight="bold" textAnchor="end" style={{ pointerEvents: 'none', userSelect: 'none' }}>
                                             F_h
                                         </text>
 
-                                        <line x1={BASE_X + damBaseWidth / 3} y1={GROUND_Y - damHeight - 20} x2={BASE_X + damBaseWidth / 3} y2={GROUND_Y - damHeight - 5} stroke="#4ade80" strokeWidth="3" markerEnd="url(#arrowheadGreen)" />
+                                        <line x1={BASE_X + damBaseWidth / 3} y1={GROUND_Y - damHeight - 20} x2={BASE_X + damBaseWidth / 3} y2={GROUND_Y - damHeight - 5} stroke="#59854e" strokeWidth="3" markerEnd="url(#arrowheadGreen)" />
                                         <defs>
                                             <marker id="arrowheadGreen" markerWidth="10" markerHeight="10" refX="5" refY="9" orient="auto">
-                                                <polygon points="0 0, 5 10, 10 0" fill="#4ade80" />
+                                                <polygon points="0 0, 5 10, 10 0" fill="#59854e" />
                                             </marker>
                                         </defs>
-                                        <text x={BASE_X + damBaseWidth / 3 + 10} y={GROUND_Y - damHeight - 25} fill="#4ade80" fontSize="10" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                        <text x={BASE_X + damBaseWidth / 3 + 10} y={GROUND_Y - damHeight - 25} fill="#59854e" fontSize="10" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>
                                             W
                                         </text>
                                     </>
@@ -480,21 +476,21 @@
 
                                 <defs>
                                     <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                        <stop offset="0%" stopColor="#87ceeb" />
-                                        <stop offset="100%" stopColor="#b0d4e3" />
+                                        <stop offset="0%" stopColor="#c0d4fd" />
+                                        <stop offset="100%" stopColor="#dce6f5" />
                                     </linearGradient>
                                     <linearGradient id="waterGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                        <stop offset="0%" stopColor="#0077be" />
-                                        <stop offset="100%" stopColor="#003d5c" />
+                                        <stop offset="0%" stopColor="#7e8dab" />
+                                        <stop offset="100%" stopColor="#4d535a" />
                                     </linearGradient>
                                     <linearGradient id="concreteGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stopColor="#8b8b8b" />
-                                        <stop offset="50%" stopColor="#a8a8a8" />
-                                        <stop offset="100%" stopColor="#6b6b6b" />
+                                        <stop offset="0%" stopColor="#a5a5a8" />
+                                        <stop offset="50%" stopColor="#e2e0da" />
+                                        <stop offset="100%" stopColor="#a5a5a8" />
                                     </linearGradient>
                                     <linearGradient id="groundGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                        <stop offset="0%" stopColor="#654321" />
-                                        <stop offset="100%" stopColor="#3d2817" />
+                                        <stop offset="0%" stopColor="#4d535a" />
+                                        <stop offset="100%" stopColor="#3a3a3a" />
                                     </linearGradient>
                                 </defs>
                             </svg>
@@ -506,20 +502,19 @@
                             gap: '2rem',
                         }}>
                             <div style={{
-                                background: 'rgba(28, 37, 65, 0.7)',
-                                backdropFilter: 'blur(10px)',
-                                borderRadius: '12px',
-                                border: '2px solid rgba(142, 202, 230, 0.3)',
+                                background: '#fff',
+                                borderRadius: '8px',
+                                border: '1px solid #e2e0da',
                                 padding: '2rem',
-                                boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                             }}>
                                 <h2 style={{
                                     margin: '0 0 1.5rem 0',
                                     fontSize: '1.3rem',
-                                    color: '#8ecae6',
-                                    borderBottom: '2px solid #ffc857',
+                                    color: '#000',
+                                    borderBottom: '3px solid #dec55b',
                                     paddingBottom: '0.5rem',
-                                    letterSpacing: '0.05em',
+                                    letterSpacing: '0.02em',
                                 }}>
                                     INPUT PARAMETERS
                                 </h2>
@@ -540,10 +535,9 @@
                                             <label style={{
                                                 display: 'block',
                                                 fontSize: '0.85rem',
-                                                color: '#8ecae6',
+                                                color: '#4d535a',
                                                 marginBottom: '0.4rem',
                                                 fontWeight: '600',
-                                                letterSpacing: '0.03em',
                                             }}>
                                                 {label}
                                             </label>
@@ -557,13 +551,14 @@
                                                 style={{
                                                     width: '100%',
                                                     padding: '0.7rem',
-                                                    background: 'rgba(10, 17, 40, 0.6)',
-                                                    border: '2px solid rgba(142, 202, 230, 0.4)',
-                                                    borderRadius: '6px',
-                                                    color: '#e8f1f5',
+                                                    background: '#f5f4f0',
+                                                    border: '1px solid #e2e0da',
+                                                    borderRadius: '4px',
+                                                    color: '#000',
                                                     fontSize: '1rem',
                                                     fontFamily: 'inherit',
                                                     transition: 'all 0.2s',
+                                                    boxSizing: 'border-box',
                                                 }}
                                             />
                                         </div>
@@ -581,20 +576,19 @@
         function ResultsPanel({ results }) {
             return (
                 <div style={{
-                    background: 'rgba(28, 37, 65, 0.7)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: '12px',
-                    border: '2px solid rgba(142, 202, 230, 0.3)',
+                    background: '#fff',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e0da',
                     padding: '2rem',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                 }}>
                     <h2 style={{
                         margin: '0 0 1.5rem 0',
                         fontSize: '1.3rem',
-                        color: '#8ecae6',
-                        borderBottom: '2px solid #ffc857',
+                        color: '#000',
+                        borderBottom: '3px solid #dec55b',
                         paddingBottom: '0.5rem',
-                        letterSpacing: '0.05em',
+                        letterSpacing: '0.02em',
                     }}>
                         ANALYSIS RESULTS
                     </h2>
@@ -603,26 +597,26 @@
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <div style={{
                                 padding: '1rem',
-                                background: results.overallPass ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                                border: `2px solid ${results.overallPass ? '#22c55e' : '#ef4444'}`,
-                                borderRadius: '8px',
+                                background: results.overallPass ? 'rgba(89, 133, 78, 0.1)' : 'rgba(130, 19, 7, 0.08)',
+                                border: `2px solid ${results.overallPass ? '#59854e' : '#821307'}`,
+                                borderRadius: '6px',
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.8rem',
                             }}>
-                                {results.overallPass ? <CheckCircle2 size={28} color="#22c55e" /> : <AlertCircle size={28} color="#ef4444" />}
+                                {results.overallPass ? <CheckCircle2 size={28} color="#59854e" /> : <AlertCircle size={28} color="#821307" />}
                                 <div>
-                                    <div style={{ fontWeight: '700', fontSize: '1.1rem' }}>
+                                    <div style={{ fontWeight: '700', fontSize: '1.1rem', color: '#000' }}>
                                         {results.overallPass ? 'STABLE' : 'UNSTABLE'}
                                     </div>
-                                    <div style={{ fontSize: '0.85rem', color: '#8ecae6', marginTop: '0.2rem' }}>
+                                    <div style={{ fontSize: '0.85rem', color: '#4d535a', marginTop: '0.2rem' }}>
                                         {results.overallPass ? 'Dam meets NVE safety criteria' : 'Dam does not meet safety requirements'}
                                     </div>
                                 </div>
                             </div>
 
                             <div>
-                                <h3 style={{ fontSize: '1rem', color: '#ffc857', margin: '0 0 0.8rem 0', letterSpacing: '0.05em' }}>
+                                <h3 style={{ fontSize: '1rem', color: '#a4852f', margin: '0 0 0.8rem 0', letterSpacing: '0.02em', fontWeight: '700' }}>
                                     FORCES (kN/m)
                                 </h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -636,7 +630,7 @@
                             </div>
 
                             <div>
-                                <h3 style={{ fontSize: '1rem', color: '#ffc857', margin: '0 0 0.8rem 0', letterSpacing: '0.05em' }}>
+                                <h3 style={{ fontSize: '1rem', color: '#a4852f', margin: '0 0 0.8rem 0', letterSpacing: '0.02em', fontWeight: '700' }}>
                                     SAFETY FACTORS
                                 </h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -646,7 +640,7 @@
                             </div>
 
                             <div>
-                                <h3 style={{ fontSize: '1rem', color: '#ffc857', margin: '0 0 0.8rem 0', letterSpacing: '0.05em' }}>
+                                <h3 style={{ fontSize: '1rem', color: '#a4852f', margin: '0 0 0.8rem 0', letterSpacing: '0.02em', fontWeight: '700' }}>
                                     BASE STRESSES (kPa)
                                 </h3>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -658,11 +652,11 @@
 
                             <div style={{
                                 padding: '1rem',
-                                background: 'rgba(142, 202, 230, 0.1)',
-                                border: '1px solid rgba(142, 202, 230, 0.3)',
-                                borderRadius: '6px',
+                                background: '#f5f4f0',
+                                border: '1px solid #e2e0da',
+                                borderRadius: '4px',
                                 fontSize: '0.8rem',
-                                color: '#8ecae6',
+                                color: '#4d535a',
                                 display: 'flex',
                                 gap: '0.6rem',
                             }}>
@@ -684,12 +678,12 @@
                     display: 'flex',
                     justifyContent: 'space-between',
                     padding: '0.5rem 0.8rem',
-                    background: 'rgba(10, 17, 40, 0.4)',
+                    background: '#f5f4f0',
                     borderRadius: '4px',
                     fontSize: '0.9rem',
                 }}>
-                    <span style={{ color: '#8ecae6' }}>{label}</span>
-                    <span style={{ fontWeight: '600', color: '#e8f1f5' }}>{value}</span>
+                    <span style={{ color: '#4d535a' }}>{label}</span>
+                    <span style={{ fontWeight: '600', color: '#000' }}>{value}</span>
                 </div>
             );
         }
@@ -701,21 +695,21 @@
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     padding: '0.6rem 0.8rem',
-                    background: pass ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                    border: `1px solid ${pass ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                    background: pass ? 'rgba(89, 133, 78, 0.08)' : 'rgba(130, 19, 7, 0.06)',
+                    border: `1px solid ${pass ? 'rgba(89, 133, 78, 0.3)' : 'rgba(130, 19, 7, 0.25)'}`,
                     borderRadius: '4px',
                     fontSize: '0.9rem',
                 }}>
                     <div style={{ flex: 1 }}>
-                        <div style={{ color: '#e8f1f5', fontWeight: '600' }}>{label}</div>
-                        <div style={{ fontSize: '0.75rem', color: '#8ecae6', marginTop: '0.2rem' }}>
+                        <div style={{ color: '#000', fontWeight: '600' }}>{label}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#4d535a', marginTop: '0.2rem' }}>
                             Required: {required}
                         </div>
                     </div>
                     <div style={{
                         fontWeight: '700',
                         fontSize: '1.1rem',
-                        color: pass ? '#22c55e' : '#ef4444',
+                        color: pass ? '#59854e' : '#821307',
                     }}>
                         {value}
                     </div>
