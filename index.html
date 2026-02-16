@@ -428,15 +428,6 @@
                                     Wt={inputs.damTopWidth.toFixed(1)}m
                                 </text>
 
-                                {/* Dam base width indicator (draggable) */}
-                                <line x1={BASE_X} y1={GROUND_Y + 15} x2={BASE_X + damBaseWidth} y2={GROUND_Y + 15} stroke="#dec55b" strokeWidth="2" />
-                                <line x1={BASE_X} y1={GROUND_Y + 10} x2={BASE_X} y2={GROUND_Y + 20} stroke="#dec55b" strokeWidth="2" />
-                                <line x1={BASE_X + damBaseWidth} y1={GROUND_Y + 10} x2={BASE_X + damBaseWidth} y2={GROUND_Y + 20} stroke="#dec55b" strokeWidth="2" />
-                                <circle cx={BASE_X + damBaseWidth} cy={GROUND_Y + 15} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ew-resize' }} onMouseDown={() => handleMouseDown('damBaseWidth')} />
-                                <text x={BASE_X + damBaseWidth / 2} y={GROUND_Y + 35} fill="#dec55b" fontSize="11" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                                    Wb={inputs.damBaseWidth.toFixed(1)}m
-                                </text>
-
                                 {tailwaterHeight > 0 && (
                                     <>
                                         <rect x={BASE_X + damBaseWidth} y={GROUND_Y - tailwaterHeight} width={SVG_WIDTH - (BASE_X + damBaseWidth)} height={tailwaterHeight} fill="url(#waterGradient)" opacity="0.5" />
@@ -449,6 +440,15 @@
                                 )}
 
                                 <rect x="0" y={GROUND_Y} width={SVG_WIDTH} height={SVG_HEIGHT - GROUND_Y} fill="url(#groundGradient)" />
+
+                                {/* Dam base width indicator (draggable) - rendered after ground so it's visible */}
+                                <line x1={BASE_X} y1={GROUND_Y + 15} x2={BASE_X + damBaseWidth} y2={GROUND_Y + 15} stroke="#dec55b" strokeWidth="2" />
+                                <line x1={BASE_X} y1={GROUND_Y + 10} x2={BASE_X} y2={GROUND_Y + 20} stroke="#dec55b" strokeWidth="2" />
+                                <line x1={BASE_X + damBaseWidth} y1={GROUND_Y + 10} x2={BASE_X + damBaseWidth} y2={GROUND_Y + 20} stroke="#dec55b" strokeWidth="2" />
+                                <circle cx={BASE_X + damBaseWidth} cy={GROUND_Y + 15} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ew-resize' }} onMouseDown={() => handleMouseDown('damBaseWidth')} />
+                                <text x={BASE_X + damBaseWidth / 2} y={GROUND_Y + 35} fill="#dec55b" fontSize="11" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                    Wb={inputs.damBaseWidth.toFixed(1)}m
+                                </text>
 
                                 {results && (
                                     <>
