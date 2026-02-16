@@ -47,630 +47,9 @@
             </svg>
         );
 
-        function DamStabilityAnalyzer() {
-            const [inputs, setInputs] = useState({
-                damHeight: 15,
-                damTopWidth: 3,
-                damBaseWidth: 12,
-                waterDepth: 14,
-                concreteDensity: 2400,
-                waterDensity: 1000,
-                tailwaterDepth: 2,
-                upliftReduction: 0.5,
-                frictionCoeff: 0.75,
-            });
-
-            const [results, setResults] = useState(null);
-            const [dragging, setDragging] = useState(null);
-            const svgRef = useRef(null);
-
-            useEffect(() => {
-                calculateStability();
-            }, [inputs]);
-
-            const calculateStability = () => {
-                const g = 9.81;
-                const {
-                    damHeight,
-                    damTopWidth,
-                    damBaseWidth,
-                    waterDepth,
-                    concreteDensity,
-                    waterDensity,
-                    tailwaterDepth,
-                    upliftReduction,
-                    frictionCoeff,
-                } = inputs;
-
-                // Trapezoid area = (top width + base width) / 2 * height
-                const damArea = ((damTopWidth + damBaseWidth) / 2) * damHeight;
-                const selfWeight = damArea * concreteDensity * g;
-
-                const upstreamPressure = 0.5 * waterDensity * g * waterDepth * waterDepth;
-                const downstreamPressure = 0.5 * waterDensity * g * tailwaterDepth * tailwaterDepth;
-                const netHorizontalForce = upstreamPressure - downstreamPressure;
-
-                const upliftForce = upliftReduction * 0.5 * waterDensity * g * waterDepth * damBaseWidth;
-                const effectiveVerticalForce = selfWeight - upliftForce;
-
-                const resistingForce = frictionCoeff * effectiveVerticalForce;
-                const slidingSafetyFactor = resistingForce / netHorizontalForce;
-
-                // Centroid of trapezoid from left edge
-                const centroidX = (damBaseWidth / 3) * ((2 * damBaseWidth + damTopWidth) / (damBaseWidth + damTopWidth));
-                const restoringingMoment = selfWeight * centroidX;
-                const hydrostaticMomentArm = waterDepth / 3;
-                const overturningMoment = upstreamPressure * hydrostaticMomentArm;
-                const upliftMoment = upliftForce * (damBaseWidth / 2);
-                const netOverturningMoment = overturningMoment + upliftMoment;
-                const overturningFactor = restoringingMoment / netOverturningMoment;
-
-                const eccentricity = (restoringingMoment - netOverturningMoment) / effectiveVerticalForce;
-                const maxStress = (effectiveVerticalForce / damBaseWidth) * (1 + 6 * eccentricity / damBaseWidth);
-                const minStress = (effectiveVerticalForce / damBaseWidth) * (1 - 6 * eccentricity / damBaseWidth);
-
-                const minSlidingSF = 1.5;
-                const minOverturningFactor = 1.5;
-                const maxTensileStress = 0;
-
-                setResults({
-                    selfWeight: selfWeight / 1000,
-                    upstreamPressure: upstreamPressure / 1000,
-                    downstreamPressure: downstreamPressure / 1000,
-                    netHorizontalForce: netHorizontalForce / 1000,
-                    upliftForce: upliftForce / 1000,
-                    effectiveVerticalForce: effectiveVerticalForce / 1000,
-                    slidingSafetyFactor,
-                    overturningFactor,
-                    maxStress: maxStress / 1000,
-                    minStress: minStress / 1000,
-                    eccentricity,
-                    centroidX,
-                    restoringingMoment: restoringingMoment / 1000,
-                    overturningMoment: overturningMoment / 1000,
-                    upliftMoment: upliftMoment / 1000,
-                    damArea,
-                    slidingPass: slidingSafetyFactor >= minSlidingSF,
-                    overturningPass: overturningFactor >= minOverturningFactor,
-                    tensionPass: minStress >= maxTensileStress,
-                    overallPass: slidingSafetyFactor >= minSlidingSF && 
-                               overturningFactor >= minOverturningFactor && 
-                               minStress >= maxTensileStress,
-                });
-            };
-
-            const handleInputChange = (field, value) => {
-                setInputs(prev => ({
-                    ...prev,
-                    [field]: parseFloat(value) || 0,
-                }));
-            };
-
-            const exportToExcel = () => {
-                if (!results) return;
-
-                // Create CSV content
-                let csvContent = "Dam Stability Analysis - Norwegian NVE Standard\n\n";
-                
-                csvContent += "INPUT PARAMETERS\n";
-                csvContent += "Parameter,Value,Unit\n";
-                csvContent += `Dam Height,${inputs.damHeight},m\n`;
-                csvContent += `Dam Top Width,${inputs.damTopWidth},m\n`;
-                csvContent += `Dam Base Width,${inputs.damBaseWidth},m\n`;
-                csvContent += `Upstream Water Depth,${inputs.waterDepth},m\n`;
-                csvContent += `Tailwater Depth,${inputs.tailwaterDepth},m\n`;
-                csvContent += `Concrete Density,${inputs.concreteDensity},kg/m³\n`;
-                csvContent += `Water Density,${inputs.waterDensity},kg/m³\n`;
-                csvContent += `Uplift Reduction Factor,${inputs.upliftReduction},-\n`;
-                csvContent += `Friction Coefficient,${inputs.frictionCoeff},-\n`;
-                csvContent += "\n";
-                
-                csvContent += "CALCULATED VALUES\n";
-                csvContent += "Item,Value,Unit\n";
-                csvContent += `Dam Cross-sectional Area,${results.damArea.toFixed(2)},m²\n`;
-                csvContent += `Centroid X-position,${results.centroidX.toFixed(2)},m\n`;
-                csvContent += "\n";
-                
-                csvContent += "FORCES\n";
-                csvContent += "Force,Value,Unit\n";
-                csvContent += `Self Weight,${results.selfWeight.toFixed(2)},kN/m\n`;
-                csvContent += `Upstream Hydrostatic Pressure,${results.upstreamPressure.toFixed(2)},kN/m\n`;
-                csvContent += `Downstream Hydrostatic Pressure,${results.downstreamPressure.toFixed(2)},kN/m\n`;
-                csvContent += `Net Horizontal Force,${results.netHorizontalForce.toFixed(2)},kN/m\n`;
-                csvContent += `Uplift Force,${results.upliftForce.toFixed(2)},kN/m\n`;
-                csvContent += `Effective Vertical Force,${results.effectiveVerticalForce.toFixed(2)},kN/m\n`;
-                csvContent += "\n";
-                
-                csvContent += "MOMENTS\n";
-                csvContent += "Moment,Value,Unit\n";
-                csvContent += `Restoring Moment,${results.restoringingMoment.toFixed(2)},kNm/m\n`;
-                csvContent += `Overturning Moment (Hydrostatic),${results.overturningMoment.toFixed(2)},kNm/m\n`;
-                csvContent += `Overturning Moment (Uplift),${results.upliftMoment.toFixed(2)},kNm/m\n`;
-                csvContent += "\n";
-                
-                csvContent += "STABILITY ANALYSIS\n";
-                csvContent += "Check,Value,Requirement,Status\n";
-                csvContent += `Sliding Safety Factor,${results.slidingSafetyFactor.toFixed(3)},≥ 1.5,${results.slidingPass ? 'PASS' : 'FAIL'}\n`;
-                csvContent += `Overturning Factor,${results.overturningFactor.toFixed(3)},≥ 1.5,${results.overturningPass ? 'PASS' : 'FAIL'}\n`;
-                csvContent += "\n";
-                
-                csvContent += "BASE STRESSES\n";
-                csvContent += "Stress,Value,Unit\n";
-                csvContent += `Maximum Base Stress,${results.maxStress.toFixed(2)},kPa\n`;
-                csvContent += `Minimum Base Stress,${results.minStress.toFixed(2)},kPa\n`;
-                csvContent += `Eccentricity,${results.eccentricity.toFixed(3)},m\n`;
-                csvContent += `Tension Check,${results.minStress.toFixed(2)} kPa,≥ 0 kPa,${results.tensionPass ? 'PASS' : 'FAIL'}\n`;
-                csvContent += "\n";
-                
-                csvContent += `OVERALL STABILITY,${results.overallPass ? 'STABLE - PASS' : 'UNSTABLE - FAIL'}\n`;
-                csvContent += "\n";
-                csvContent += "Analysis Date," + new Date().toLocaleString() + "\n";
-                csvContent += "Note: Analysis based on simplified 2D gravity dam model with trapezoidal cross-section\n";
-
-                // Create blob and download
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', `dam_stability_analysis_${new Date().toISOString().split('T')[0]}.csv`);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            };
-
-            const SVG_WIDTH = 600;
-            const SVG_HEIGHT = 400;
-            const GROUND_Y = 320;
-            const SCALE = 8;
-            const BASE_X = 50;
-
-            const damBaseWidth = inputs.damBaseWidth * SCALE;
-            const damTopWidth = inputs.damTopWidth * SCALE;
-            const damHeight = inputs.damHeight * SCALE;
-            const waterHeight = inputs.waterDepth * SCALE;
-            const tailwaterHeight = inputs.tailwaterDepth * SCALE;
-
-            // Trapezoid points (left side vertical, right side sloped)
-            const damPoints = [
-                { x: BASE_X, y: GROUND_Y }, // Bottom left
-                { x: BASE_X + damBaseWidth, y: GROUND_Y }, // Bottom right
-                { x: BASE_X + damTopWidth, y: GROUND_Y - damHeight }, // Top right
-                { x: BASE_X, y: GROUND_Y - damHeight }, // Top left
-            ];
-
-            const handleMouseDown = (dragType) => {
-                setDragging(dragType);
-            };
-
-            const handleMouseMove = (e) => {
-                if (!dragging || !svgRef.current) return;
-
-                const rect = svgRef.current.getBoundingClientRect();
-                const mouseY = e.clientY - rect.top;
-                const mouseX = e.clientX - rect.left;
-
-                if (dragging === 'damHeight') {
-                    const newHeight = Math.max(5, Math.min(40, (GROUND_Y - mouseY) / SCALE));
-                    handleInputChange('damHeight', newHeight);
-                } else if (dragging === 'damBaseWidth') {
-                    const newWidth = Math.max(inputs.damTopWidth + 1, Math.min(50, (mouseX - BASE_X) / SCALE));
-                    handleInputChange('damBaseWidth', newWidth);
-                } else if (dragging === 'damTopWidth') {
-                    const newTopWidth = Math.max(1, Math.min(inputs.damBaseWidth - 1, (mouseX - BASE_X) / SCALE));
-                    handleInputChange('damTopWidth', newTopWidth);
-                } else if (dragging === 'waterDepth') {
-                    const newDepth = Math.max(0, Math.min(inputs.damHeight, (GROUND_Y - mouseY) / SCALE));
-                    handleInputChange('waterDepth', newDepth);
-                } else if (dragging === 'tailwater') {
-                    const newTailwater = Math.max(0, Math.min(inputs.damHeight / 2, (GROUND_Y - mouseY) / SCALE));
-                    handleInputChange('tailwaterDepth', newTailwater);
-                }
-            };
-
-            const handleMouseUp = () => {
-                setDragging(null);
-            };
-
-            useEffect(() => {
-                if (dragging) {
-                    window.addEventListener('mousemove', handleMouseMove);
-                    window.addEventListener('mouseup', handleMouseUp);
-                    return () => {
-                        window.removeEventListener('mousemove', handleMouseMove);
-                        window.removeEventListener('mouseup', handleMouseUp);
-                    };
-                }
-            }, [dragging, inputs]);
-
-            return (
-                <div style={{
-                    minHeight: '100vh',
-                    background: '#f5f4f0',
-                    fontFamily: '"Segoe UI", "Helvetica Neue", Arial, sans-serif',
-                    color: '#000',
-                    padding: '0',
-                    margin: '0',
-                }}>
-                    <div style={{
-                        background: '#000',
-                        borderBottom: '4px solid #dec55b',
-                        padding: '1.5rem 2rem',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-                    }}>
-                        <h1 style={{
-                            margin: '0',
-                            fontSize: '2rem',
-                            fontWeight: '700',
-                            letterSpacing: '0.02em',
-                            color: '#fff',
-                        }}>
-                            Dam Stability Analyzer
-                        </h1>
-                        <p style={{
-                            margin: '0.5rem 0 0 0',
-                            fontSize: '0.9rem',
-                            color: '#a5a5a8',
-                            letterSpacing: '0.02em',
-                        }}>
-                            Norwegian Dam Safety Standard (NVE) · Gravity Dam Analysis
-                        </p>
-                    </div>
-
-                    <div style={{
-                        maxWidth: '1400px',
-                        margin: '0 auto',
-                        padding: '2rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '2rem',
-                    }}>
-                        <div style={{
-                            background: '#fff',
-                            borderRadius: '8px',
-                            border: '1px solid #e2e0da',
-                            padding: '2rem',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                        }}>
-                            <div style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                                marginBottom: '1rem',
-                            }}>
-                                <h2 style={{
-                                    margin: '0',
-                                    fontSize: '1.3rem',
-                                    color: '#000',
-                                    borderBottom: '3px solid #dec55b',
-                                    paddingBottom: '0.5rem',
-                                    letterSpacing: '0.02em',
-                                    flex: 1,
-                                }}>
-                                    DAM VISUALIZATION
-                                </h2>
-                                <button
-                                    onClick={exportToExcel}
-                                    disabled={!results}
-                                    style={{
-                                        padding: '0.7rem 1.5rem',
-                                        background: results ? '#4d535a' : '#a5a5a8',
-                                        color: '#fff',
-                                        border: 'none',
-                                        borderRadius: '9999px',
-                                        fontSize: '0.9rem',
-                                        fontWeight: '600',
-                                        cursor: results ? 'pointer' : 'not-allowed',
-                                        transition: 'all 0.2s',
-                                        boxShadow: results ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
-                                        fontFamily: 'inherit',
-                                        letterSpacing: '0.02em',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (results) {
-                                            e.target.style.background = '#000';
-                                            e.target.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)';
-                                        }
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        e.target.style.background = results ? '#4d535a' : '#a5a5a8';
-                                        e.target.style.boxShadow = results ? '0 2px 6px rgba(0,0,0,0.15)' : 'none';
-                                    }}
-                                >
-                                    Export to CSV
-                                </button>
-                            </div>
-                            <p style={{
-                                fontSize: '0.85rem',
-                                color: '#4d535a',
-                                marginBottom: '1rem',
-                            }}>
-                                Click and drag on the geometry to adjust dimensions
-                            </p>
-
-                            <svg
-                                ref={svgRef}
-                                width={SVG_WIDTH}
-                                height={SVG_HEIGHT}
-                                style={{
-                                    background: 'linear-gradient(to bottom, #c0d4fd 0%, #8aa3b9 60%, #7e8dab 100%)',
-                                    borderRadius: '8px',
-                                    border: '1px solid #e2e0da',
-                                    cursor: dragging ? 'grabbing' : 'default',
-                                    display: 'block',
-                                    margin: '0 auto',
-                                }}
-                            >
-                                <rect x="0" y="0" width={SVG_WIDTH} height={GROUND_Y - waterHeight} fill="url(#skyGradient)" />
-                                
-                                <rect x="0" y={GROUND_Y - waterHeight} width={BASE_X} height={waterHeight} fill="url(#waterGradient)" opacity="0.7" />
-                                
-                                <line x1="0" y1={GROUND_Y - waterHeight} x2={BASE_X} y2={GROUND_Y - waterHeight} stroke="#8aa3b9" strokeWidth="3" strokeDasharray="5,5" />
-                                <circle cx={BASE_X / 2} cy={GROUND_Y - waterHeight} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ns-resize' }} onMouseDown={() => handleMouseDown('waterDepth')} />
-                                <text x={BASE_X / 2} y={GROUND_Y - waterHeight - 12} fill="#fff" fontSize="11" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                                    {inputs.waterDepth.toFixed(1)}m
-                                </text>
-
-                                <polygon points={damPoints.map(p => `${p.x},${p.y}`).join(' ')} fill="url(#concreteGradient)" stroke="#555" strokeWidth="2" />
-
-                                <line x1={BASE_X} y1={GROUND_Y} x2={BASE_X} y2={GROUND_Y - damHeight} stroke="#dec55b" strokeWidth="2" strokeDasharray="4,4" />
-                                <circle cx={BASE_X} cy={GROUND_Y - damHeight} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ns-resize' }} onMouseDown={() => handleMouseDown('damHeight')} />
-                                <text x={BASE_X - 15} y={GROUND_Y - damHeight / 2} fill="#dec55b" fontSize="11" fontWeight="bold" textAnchor="end" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                                    H={inputs.damHeight.toFixed(1)}m
-                                </text>
-
-                                {/* Dam top width indicator */}
-                                <line x1={BASE_X} y1={GROUND_Y - damHeight - 15} x2={BASE_X + damTopWidth} y2={GROUND_Y - damHeight - 15} stroke="#dec55b" strokeWidth="2" />
-                                <line x1={BASE_X} y1={GROUND_Y - damHeight - 20} x2={BASE_X} y2={GROUND_Y - damHeight - 10} stroke="#dec55b" strokeWidth="2" />
-                                <line x1={BASE_X + damTopWidth} y1={GROUND_Y - damHeight - 20} x2={BASE_X + damTopWidth} y2={GROUND_Y - damHeight - 10} stroke="#dec55b" strokeWidth="2" />
-                                <circle cx={BASE_X + damTopWidth} cy={GROUND_Y - damHeight - 15} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ew-resize' }} onMouseDown={() => handleMouseDown('damTopWidth')} />
-                                <text x={BASE_X + damTopWidth / 2} y={GROUND_Y - damHeight - 22} fill="#dec55b" fontSize="11" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                                    Wt={inputs.damTopWidth.toFixed(1)}m
-                                </text>
-
-                                {tailwaterHeight > 0 && (
-                                    <>
-                                        <rect x={BASE_X + damBaseWidth} y={GROUND_Y - tailwaterHeight} width={SVG_WIDTH - (BASE_X + damBaseWidth)} height={tailwaterHeight} fill="url(#waterGradient)" opacity="0.5" />
-                                        <line x1={BASE_X + damBaseWidth} y1={GROUND_Y - tailwaterHeight} x2={SVG_WIDTH} y2={GROUND_Y - tailwaterHeight} stroke="#8aa3b9" strokeWidth="2" strokeDasharray="5,5" />
-                                        <circle cx={BASE_X + damBaseWidth + 40} cy={GROUND_Y - tailwaterHeight} r="7" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ns-resize' }} onMouseDown={() => handleMouseDown('tailwater')} />
-                                        <text x={BASE_X + damBaseWidth + 40} y={GROUND_Y - tailwaterHeight - 12} fill="#fff" fontSize="10" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                                            {inputs.tailwaterDepth.toFixed(1)}m
-                                        </text>
-                                    </>
-                                )}
-
-                                <rect x="0" y={GROUND_Y} width={SVG_WIDTH} height={SVG_HEIGHT - GROUND_Y} fill="url(#groundGradient)" />
-
-                                {/* Dam base width indicator (draggable) - rendered after ground so it's visible */}
-                                <line x1={BASE_X} y1={GROUND_Y + 15} x2={BASE_X + damBaseWidth} y2={GROUND_Y + 15} stroke="#dec55b" strokeWidth="2" />
-                                <line x1={BASE_X} y1={GROUND_Y + 10} x2={BASE_X} y2={GROUND_Y + 20} stroke="#dec55b" strokeWidth="2" />
-                                <line x1={BASE_X + damBaseWidth} y1={GROUND_Y + 10} x2={BASE_X + damBaseWidth} y2={GROUND_Y + 20} stroke="#dec55b" strokeWidth="2" />
-                                <circle cx={BASE_X + damBaseWidth} cy={GROUND_Y + 15} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ew-resize' }} onMouseDown={() => handleMouseDown('damBaseWidth')} />
-                                <text x={BASE_X + damBaseWidth / 2} y={GROUND_Y + 35} fill="#dec55b" fontSize="11" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                                    Wb={inputs.damBaseWidth.toFixed(1)}m
-                                </text>
-
-                                {results && (
-                                    <>
-                                        <defs>
-                                            <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                                                <polygon points="0 0, 10 3, 0 6" fill="#821307" />
-                                            </marker>
-                                        </defs>
-                                        <line x1={BASE_X - 30} y1={GROUND_Y - waterHeight / 3} x2={BASE_X - 5} y2={GROUND_Y - waterHeight / 3} stroke="#821307" strokeWidth="3" markerEnd="url(#arrowhead)" />
-                                        <text x={BASE_X - 35} y={GROUND_Y - waterHeight / 3 - 8} fill="#821307" fontSize="10" fontWeight="bold" textAnchor="end" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                                            F_h
-                                        </text>
-
-                                        <line x1={BASE_X + damBaseWidth / 3} y1={GROUND_Y - damHeight - 20} x2={BASE_X + damBaseWidth / 3} y2={GROUND_Y - damHeight - 5} stroke="#59854e" strokeWidth="3" markerEnd="url(#arrowheadGreen)" />
-                                        <defs>
-                                            <marker id="arrowheadGreen" markerWidth="10" markerHeight="10" refX="5" refY="9" orient="auto">
-                                                <polygon points="0 0, 5 10, 10 0" fill="#59854e" />
-                                            </marker>
-                                        </defs>
-                                        <text x={BASE_X + damBaseWidth / 3 + 10} y={GROUND_Y - damHeight - 25} fill="#59854e" fontSize="10" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>
-                                            W
-                                        </text>
-                                    </>
-                                )}
-
-                                <defs>
-                                    <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                        <stop offset="0%" stopColor="#c0d4fd" />
-                                        <stop offset="100%" stopColor="#dce6f5" />
-                                    </linearGradient>
-                                    <linearGradient id="waterGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                        <stop offset="0%" stopColor="#7e8dab" />
-                                        <stop offset="100%" stopColor="#4d535a" />
-                                    </linearGradient>
-                                    <linearGradient id="concreteGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                        <stop offset="0%" stopColor="#a5a5a8" />
-                                        <stop offset="50%" stopColor="#e2e0da" />
-                                        <stop offset="100%" stopColor="#a5a5a8" />
-                                    </linearGradient>
-                                    <linearGradient id="groundGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-                                        <stop offset="0%" stopColor="#4d535a" />
-                                        <stop offset="100%" stopColor="#3a3a3a" />
-                                    </linearGradient>
-                                </defs>
-                            </svg>
-                        </div>
-
-                        <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-                            gap: '2rem',
-                        }}>
-                            <div style={{
-                                background: '#fff',
-                                borderRadius: '8px',
-                                border: '1px solid #e2e0da',
-                                padding: '2rem',
-                                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                            }}>
-                                <h2 style={{
-                                    margin: '0 0 1.5rem 0',
-                                    fontSize: '1.3rem',
-                                    color: '#000',
-                                    borderBottom: '3px solid #dec55b',
-                                    paddingBottom: '0.5rem',
-                                    letterSpacing: '0.02em',
-                                }}>
-                                    INPUT PARAMETERS
-                                </h2>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
-                                    {[
-                                        { label: 'Dam Height (m)', field: 'damHeight', min: 5, max: 100 },
-                                        { label: 'Dam Top Width (m)', field: 'damTopWidth', min: 1, max: 50 },
-                                        { label: 'Dam Base Width (m)', field: 'damBaseWidth', min: 3, max: 80 },
-                                        { label: 'Upstream Water Depth (m)', field: 'waterDepth', min: 0, max: 100 },
-                                        { label: 'Tailwater Depth (m)', field: 'tailwaterDepth', min: 0, max: 50 },
-                                        { label: 'Concrete Density (kg/m³)', field: 'concreteDensity', min: 2200, max: 2600 },
-                                        { label: 'Water Density (kg/m³)', field: 'waterDensity', min: 950, max: 1050 },
-                                        { label: 'Uplift Reduction Factor', field: 'upliftReduction', min: 0, max: 1, step: 0.1 },
-                                        { label: 'Friction Coefficient', field: 'frictionCoeff', min: 0.5, max: 1.0, step: 0.05 },
-                                    ].map(({ label, field, min, max, step = 1 }) => (
-                                        <div key={field}>
-                                            <label style={{
-                                                display: 'block',
-                                                fontSize: '0.85rem',
-                                                color: '#4d535a',
-                                                marginBottom: '0.4rem',
-                                                fontWeight: '600',
-                                            }}>
-                                                {label}
-                                            </label>
-                                            <input
-                                                type="number"
-                                                value={inputs[field]}
-                                                onChange={(e) => handleInputChange(field, e.target.value)}
-                                                min={min}
-                                                max={max}
-                                                step={step}
-                                                style={{
-                                                    width: '100%',
-                                                    padding: '0.7rem',
-                                                    background: '#f5f4f0',
-                                                    border: '1px solid #e2e0da',
-                                                    borderRadius: '4px',
-                                                    color: '#000',
-                                                    fontSize: '1rem',
-                                                    fontFamily: 'inherit',
-                                                    transition: 'all 0.2s',
-                                                    boxSizing: 'border-box',
-                                                }}
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <ResultsPanel results={results} />
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
-        function ResultsPanel({ results }) {
-            return (
-                <div style={{
-                    background: '#fff',
-                    borderRadius: '8px',
-                    border: '1px solid #e2e0da',
-                    padding: '2rem',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                }}>
-                    <h2 style={{
-                        margin: '0 0 1.5rem 0',
-                        fontSize: '1.3rem',
-                        color: '#000',
-                        borderBottom: '3px solid #dec55b',
-                        paddingBottom: '0.5rem',
-                        letterSpacing: '0.02em',
-                    }}>
-                        ANALYSIS RESULTS
-                    </h2>
-
-                    {results && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                            <div style={{
-                                padding: '1rem',
-                                background: results.overallPass ? 'rgba(89, 133, 78, 0.1)' : 'rgba(130, 19, 7, 0.08)',
-                                border: `2px solid ${results.overallPass ? '#59854e' : '#821307'}`,
-                                borderRadius: '6px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.8rem',
-                            }}>
-                                {results.overallPass ? <CheckCircle2 size={28} color="#59854e" /> : <AlertCircle size={28} color="#821307" />}
-                                <div>
-                                    <div style={{ fontWeight: '700', fontSize: '1.1rem', color: '#000' }}>
-                                        {results.overallPass ? 'STABLE' : 'UNSTABLE'}
-                                    </div>
-                                    <div style={{ fontSize: '0.85rem', color: '#4d535a', marginTop: '0.2rem' }}>
-                                        {results.overallPass ? 'Dam meets NVE safety criteria' : 'Dam does not meet safety requirements'}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <h3 style={{ fontSize: '1rem', color: '#a4852f', margin: '0 0 0.8rem 0', letterSpacing: '0.02em', fontWeight: '700' }}>
-                                    FORCES (kN/m)
-                                </h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                                    <ResultRow label="Self Weight" value={results.selfWeight.toFixed(1)} />
-                                    <ResultRow label="Upstream Pressure" value={results.upstreamPressure.toFixed(1)} />
-                                    <ResultRow label="Downstream Pressure" value={results.downstreamPressure.toFixed(1)} />
-                                    <ResultRow label="Net Horizontal Force" value={results.netHorizontalForce.toFixed(1)} />
-                                    <ResultRow label="Uplift Force" value={results.upliftForce.toFixed(1)} />
-                                    <ResultRow label="Effective Vertical" value={results.effectiveVerticalForce.toFixed(1)} />
-                                </div>
-                            </div>
-
-                            <div>
-                                <h3 style={{ fontSize: '1rem', color: '#a4852f', margin: '0 0 0.8rem 0', letterSpacing: '0.02em', fontWeight: '700' }}>
-                                    SAFETY FACTORS
-                                </h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                                    <SafetyRow label="Sliding Safety Factor" value={results.slidingSafetyFactor.toFixed(2)} required="≥ 1.5" pass={results.slidingPass} />
-                                    <SafetyRow label="Overturning Factor" value={results.overturningFactor.toFixed(2)} required="≥ 1.5" pass={results.overturningPass} />
-                                </div>
-                            </div>
-
-                            <div>
-                                <h3 style={{ fontSize: '1rem', color: '#a4852f', margin: '0 0 0.8rem 0', letterSpacing: '0.02em', fontWeight: '700' }}>
-                                    BASE STRESSES (kPa)
-                                </h3>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                                    <ResultRow label="Maximum Stress" value={results.maxStress.toFixed(1)} />
-                                    <SafetyRow label="Minimum Stress" value={results.minStress.toFixed(1)} required="≥ 0 (no tension)" pass={results.tensionPass} />
-                                    <ResultRow label="Eccentricity" value={`${results.eccentricity.toFixed(2)} m`} />
-                                </div>
-                            </div>
-
-                            <div style={{
-                                padding: '1rem',
-                                background: '#f5f4f0',
-                                border: '1px solid #e2e0da',
-                                borderRadius: '4px',
-                                fontSize: '0.8rem',
-                                color: '#4d535a',
-                                display: 'flex',
-                                gap: '0.6rem',
-                            }}>
-                                <Info size={18} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
-                                <div>
-                                    Analysis based on simplified 2D gravity dam model with trapezoidal cross-section. 
-                                    For detailed design, consult NVE regulations and perform comprehensive finite element analysis.
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            );
-        }
+        /* ============================================================
+           Shared UI components
+           ============================================================ */
 
         function ResultRow({ label, value }) {
             return (
@@ -712,6 +91,1241 @@
                         color: pass ? '#59854e' : '#821307',
                     }}>
                         {value}
+                    </div>
+                </div>
+            );
+        }
+
+        /* ============================================================
+           Gravity Dam View (extracted from original DamStabilityAnalyzer)
+           ============================================================ */
+
+        function GravityDamView() {
+            const [inputs, setInputs] = useState({
+                damHeight: 15,
+                damTopWidth: 3,
+                damBaseWidth: 12,
+                waterDepth: 14,
+                concreteDensity: 2400,
+                waterDensity: 1000,
+                tailwaterDepth: 2,
+                upliftReduction: 0.5,
+                frictionCoeff: 0.75,
+            });
+
+            const [results, setResults] = useState(null);
+            const [dragging, setDragging] = useState(null);
+            const svgRef = useRef(null);
+
+            useEffect(() => {
+                calculateStability();
+            }, [inputs]);
+
+            const calculateStability = () => {
+                const g = 9.81;
+                const {
+                    damHeight, damTopWidth, damBaseWidth, waterDepth,
+                    concreteDensity, waterDensity, tailwaterDepth,
+                    upliftReduction, frictionCoeff,
+                } = inputs;
+
+                const damArea = ((damTopWidth + damBaseWidth) / 2) * damHeight;
+                const selfWeight = damArea * concreteDensity * g;
+
+                const upstreamPressure = 0.5 * waterDensity * g * waterDepth * waterDepth;
+                const downstreamPressure = 0.5 * waterDensity * g * tailwaterDepth * tailwaterDepth;
+                const netHorizontalForce = upstreamPressure - downstreamPressure;
+
+                const upliftForce = upliftReduction * 0.5 * waterDensity * g * waterDepth * damBaseWidth;
+                const effectiveVerticalForce = selfWeight - upliftForce;
+
+                const resistingForce = frictionCoeff * effectiveVerticalForce;
+                const slidingSafetyFactor = resistingForce / netHorizontalForce;
+
+                const centroidX = (damBaseWidth / 3) * ((2 * damBaseWidth + damTopWidth) / (damBaseWidth + damTopWidth));
+                const restoringingMoment = selfWeight * centroidX;
+                const hydrostaticMomentArm = waterDepth / 3;
+                const overturningMoment = upstreamPressure * hydrostaticMomentArm;
+                const upliftMoment = upliftForce * (damBaseWidth / 2);
+                const netOverturningMoment = overturningMoment + upliftMoment;
+                const overturningFactor = restoringingMoment / netOverturningMoment;
+
+                const eccentricity = (restoringingMoment - netOverturningMoment) / effectiveVerticalForce;
+                const maxStress = (effectiveVerticalForce / damBaseWidth) * (1 + 6 * eccentricity / damBaseWidth);
+                const minStress = (effectiveVerticalForce / damBaseWidth) * (1 - 6 * eccentricity / damBaseWidth);
+
+                const minSlidingSF = 1.5;
+                const minOverturningFactor = 1.5;
+
+                setResults({
+                    selfWeight: selfWeight / 1000,
+                    upstreamPressure: upstreamPressure / 1000,
+                    downstreamPressure: downstreamPressure / 1000,
+                    netHorizontalForce: netHorizontalForce / 1000,
+                    upliftForce: upliftForce / 1000,
+                    effectiveVerticalForce: effectiveVerticalForce / 1000,
+                    slidingSafetyFactor,
+                    overturningFactor,
+                    maxStress: maxStress / 1000,
+                    minStress: minStress / 1000,
+                    eccentricity,
+                    centroidX,
+                    restoringingMoment: restoringingMoment / 1000,
+                    overturningMoment: overturningMoment / 1000,
+                    upliftMoment: upliftMoment / 1000,
+                    damArea,
+                    slidingPass: slidingSafetyFactor >= minSlidingSF,
+                    overturningPass: overturningFactor >= minOverturningFactor,
+                    tensionPass: minStress >= 0,
+                    overallPass: slidingSafetyFactor >= minSlidingSF &&
+                                 overturningFactor >= minOverturningFactor &&
+                                 minStress >= 0,
+                });
+            };
+
+            const handleInputChange = (field, value) => {
+                setInputs(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
+            };
+
+            const exportToExcel = () => {
+                if (!results) return;
+                let csv = "Dam Stability Analysis - Norwegian NVE Standard\n\n";
+                csv += "INPUT PARAMETERS\nParameter,Value,Unit\n";
+                csv += `Dam Height,${inputs.damHeight},m\n`;
+                csv += `Dam Top Width,${inputs.damTopWidth},m\n`;
+                csv += `Dam Base Width,${inputs.damBaseWidth},m\n`;
+                csv += `Upstream Water Depth,${inputs.waterDepth},m\n`;
+                csv += `Tailwater Depth,${inputs.tailwaterDepth},m\n`;
+                csv += `Concrete Density,${inputs.concreteDensity},kg/m³\n`;
+                csv += `Water Density,${inputs.waterDensity},kg/m³\n`;
+                csv += `Uplift Reduction Factor,${inputs.upliftReduction},-\n`;
+                csv += `Friction Coefficient,${inputs.frictionCoeff},-\n\n`;
+                csv += "CALCULATED VALUES\nItem,Value,Unit\n";
+                csv += `Dam Cross-sectional Area,${results.damArea.toFixed(2)},m²\n`;
+                csv += `Centroid X-position,${results.centroidX.toFixed(2)},m\n\n`;
+                csv += "FORCES\nForce,Value,Unit\n";
+                csv += `Self Weight,${results.selfWeight.toFixed(2)},kN/m\n`;
+                csv += `Upstream Hydrostatic Pressure,${results.upstreamPressure.toFixed(2)},kN/m\n`;
+                csv += `Downstream Hydrostatic Pressure,${results.downstreamPressure.toFixed(2)},kN/m\n`;
+                csv += `Net Horizontal Force,${results.netHorizontalForce.toFixed(2)},kN/m\n`;
+                csv += `Uplift Force,${results.upliftForce.toFixed(2)},kN/m\n`;
+                csv += `Effective Vertical Force,${results.effectiveVerticalForce.toFixed(2)},kN/m\n\n`;
+                csv += "MOMENTS\nMoment,Value,Unit\n";
+                csv += `Restoring Moment,${results.restoringingMoment.toFixed(2)},kNm/m\n`;
+                csv += `Overturning Moment (Hydrostatic),${results.overturningMoment.toFixed(2)},kNm/m\n`;
+                csv += `Overturning Moment (Uplift),${results.upliftMoment.toFixed(2)},kNm/m\n\n`;
+                csv += "STABILITY ANALYSIS\nCheck,Value,Requirement,Status\n";
+                csv += `Sliding Safety Factor,${results.slidingSafetyFactor.toFixed(3)},≥ 1.5,${results.slidingPass ? 'PASS' : 'FAIL'}\n`;
+                csv += `Overturning Factor,${results.overturningFactor.toFixed(3)},≥ 1.5,${results.overturningPass ? 'PASS' : 'FAIL'}\n\n`;
+                csv += "BASE STRESSES\nStress,Value,Unit\n";
+                csv += `Maximum Base Stress,${results.maxStress.toFixed(2)},kPa\n`;
+                csv += `Minimum Base Stress,${results.minStress.toFixed(2)},kPa\n`;
+                csv += `Eccentricity,${results.eccentricity.toFixed(3)},m\n`;
+                csv += `Tension Check,${results.minStress.toFixed(2)} kPa,≥ 0 kPa,${results.tensionPass ? 'PASS' : 'FAIL'}\n\n`;
+                csv += `OVERALL STABILITY,${results.overallPass ? 'STABLE - PASS' : 'UNSTABLE - FAIL'}\n\n`;
+                csv += "Analysis Date," + new Date().toLocaleString() + "\n";
+                csv += "Note: Analysis based on simplified 2D gravity dam model with trapezoidal cross-section\n";
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.setAttribute('href', URL.createObjectURL(blob));
+                link.setAttribute('download', `dam_stability_analysis_${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            const SVG_WIDTH = 600;
+            const SVG_HEIGHT = 400;
+            const GROUND_Y = 320;
+            const SCALE = 8;
+            const BASE_X = 50;
+
+            const damBaseWidth = inputs.damBaseWidth * SCALE;
+            const damTopWidth = inputs.damTopWidth * SCALE;
+            const damHeight = inputs.damHeight * SCALE;
+            const waterHeight = inputs.waterDepth * SCALE;
+            const tailwaterHeight = inputs.tailwaterDepth * SCALE;
+
+            const damPoints = [
+                { x: BASE_X, y: GROUND_Y },
+                { x: BASE_X + damBaseWidth, y: GROUND_Y },
+                { x: BASE_X + damTopWidth, y: GROUND_Y - damHeight },
+                { x: BASE_X, y: GROUND_Y - damHeight },
+            ];
+
+            const handleMouseDown = (dragType) => {
+                setDragging(dragType);
+            };
+
+            const handleMouseMove = (e) => {
+                if (!dragging || !svgRef.current) return;
+                const rect = svgRef.current.getBoundingClientRect();
+                const mouseY = e.clientY - rect.top;
+                const mouseX = e.clientX - rect.left;
+
+                if (dragging === 'damHeight') {
+                    handleInputChange('damHeight', Math.max(5, Math.min(40, (GROUND_Y - mouseY) / SCALE)));
+                } else if (dragging === 'damBaseWidth') {
+                    handleInputChange('damBaseWidth', Math.max(inputs.damTopWidth + 1, Math.min(50, (mouseX - BASE_X) / SCALE)));
+                } else if (dragging === 'damTopWidth') {
+                    handleInputChange('damTopWidth', Math.max(1, Math.min(inputs.damBaseWidth - 1, (mouseX - BASE_X) / SCALE)));
+                } else if (dragging === 'waterDepth') {
+                    handleInputChange('waterDepth', Math.max(0, Math.min(inputs.damHeight, (GROUND_Y - mouseY) / SCALE)));
+                } else if (dragging === 'tailwater') {
+                    handleInputChange('tailwaterDepth', Math.max(0, Math.min(inputs.damHeight / 2, (GROUND_Y - mouseY) / SCALE)));
+                }
+            };
+
+            const handleMouseUp = () => setDragging(null);
+
+            useEffect(() => {
+                if (dragging) {
+                    window.addEventListener('mousemove', handleMouseMove);
+                    window.addEventListener('mouseup', handleMouseUp);
+                    return () => {
+                        window.removeEventListener('mousemove', handleMouseMove);
+                        window.removeEventListener('mouseup', handleMouseUp);
+                    };
+                }
+            }, [dragging, inputs]);
+
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    <div style={{
+                        background: '#fff', borderRadius: '8px', border: '1px solid #e2e0da',
+                        padding: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h2 style={{
+                                margin: '0', fontSize: '1.3rem', color: '#000',
+                                borderBottom: '3px solid #dec55b', paddingBottom: '0.5rem',
+                                letterSpacing: '0.02em', flex: 1,
+                            }}>DAM VISUALIZATION</h2>
+                            <button onClick={exportToExcel} disabled={!results} style={{
+                                padding: '0.7rem 1.5rem', background: results ? '#4d535a' : '#a5a5a8',
+                                color: '#fff', border: 'none', borderRadius: '9999px', fontSize: '0.9rem',
+                                fontWeight: '600', cursor: results ? 'pointer' : 'not-allowed',
+                                transition: 'all 0.2s', boxShadow: results ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
+                                fontFamily: 'inherit', letterSpacing: '0.02em',
+                            }}
+                            onMouseEnter={(e) => { if (results) { e.target.style.background = '#000'; e.target.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)'; }}}
+                            onMouseLeave={(e) => { e.target.style.background = results ? '#4d535a' : '#a5a5a8'; e.target.style.boxShadow = results ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'; }}
+                            >Export to CSV</button>
+                        </div>
+                        <p style={{ fontSize: '0.85rem', color: '#4d535a', marginBottom: '1rem' }}>
+                            Click and drag on the geometry to adjust dimensions
+                        </p>
+
+                        <svg ref={svgRef} width={SVG_WIDTH} height={SVG_HEIGHT} style={{
+                            background: 'linear-gradient(to bottom, #c0d4fd 0%, #8aa3b9 60%, #7e8dab 100%)',
+                            borderRadius: '8px', border: '1px solid #e2e0da',
+                            cursor: dragging ? 'grabbing' : 'default', display: 'block', margin: '0 auto',
+                        }}>
+                            <rect x="0" y="0" width={SVG_WIDTH} height={GROUND_Y - waterHeight} fill="url(#skyGradient)" />
+                            <rect x="0" y={GROUND_Y - waterHeight} width={BASE_X} height={waterHeight} fill="url(#waterGradient)" opacity="0.7" />
+                            <line x1="0" y1={GROUND_Y - waterHeight} x2={BASE_X} y2={GROUND_Y - waterHeight} stroke="#8aa3b9" strokeWidth="3" strokeDasharray="5,5" />
+                            <circle cx={BASE_X / 2} cy={GROUND_Y - waterHeight} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ns-resize' }} onMouseDown={() => handleMouseDown('waterDepth')} />
+                            <text x={BASE_X / 2} y={GROUND_Y - waterHeight - 12} fill="#fff" fontSize="11" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>{inputs.waterDepth.toFixed(1)}m</text>
+
+                            <polygon points={damPoints.map(p => `${p.x},${p.y}`).join(' ')} fill="url(#concreteGradient)" stroke="#555" strokeWidth="2" />
+
+                            <line x1={BASE_X} y1={GROUND_Y} x2={BASE_X} y2={GROUND_Y - damHeight} stroke="#dec55b" strokeWidth="2" strokeDasharray="4,4" />
+                            <circle cx={BASE_X} cy={GROUND_Y - damHeight} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ns-resize' }} onMouseDown={() => handleMouseDown('damHeight')} />
+                            <text x={BASE_X - 15} y={GROUND_Y - damHeight / 2} fill="#dec55b" fontSize="11" fontWeight="bold" textAnchor="end" style={{ pointerEvents: 'none', userSelect: 'none' }}>H={inputs.damHeight.toFixed(1)}m</text>
+
+                            <line x1={BASE_X} y1={GROUND_Y - damHeight - 15} x2={BASE_X + damTopWidth} y2={GROUND_Y - damHeight - 15} stroke="#dec55b" strokeWidth="2" />
+                            <line x1={BASE_X} y1={GROUND_Y - damHeight - 20} x2={BASE_X} y2={GROUND_Y - damHeight - 10} stroke="#dec55b" strokeWidth="2" />
+                            <line x1={BASE_X + damTopWidth} y1={GROUND_Y - damHeight - 20} x2={BASE_X + damTopWidth} y2={GROUND_Y - damHeight - 10} stroke="#dec55b" strokeWidth="2" />
+                            <circle cx={BASE_X + damTopWidth} cy={GROUND_Y - damHeight - 15} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ew-resize' }} onMouseDown={() => handleMouseDown('damTopWidth')} />
+                            <text x={BASE_X + damTopWidth / 2} y={GROUND_Y - damHeight - 22} fill="#dec55b" fontSize="11" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>Wt={inputs.damTopWidth.toFixed(1)}m</text>
+
+                            {tailwaterHeight > 0 && (
+                                <>
+                                    <rect x={BASE_X + damBaseWidth} y={GROUND_Y - tailwaterHeight} width={SVG_WIDTH - (BASE_X + damBaseWidth)} height={tailwaterHeight} fill="url(#waterGradient)" opacity="0.5" />
+                                    <line x1={BASE_X + damBaseWidth} y1={GROUND_Y - tailwaterHeight} x2={SVG_WIDTH} y2={GROUND_Y - tailwaterHeight} stroke="#8aa3b9" strokeWidth="2" strokeDasharray="5,5" />
+                                    <circle cx={BASE_X + damBaseWidth + 40} cy={GROUND_Y - tailwaterHeight} r="7" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ns-resize' }} onMouseDown={() => handleMouseDown('tailwater')} />
+                                    <text x={BASE_X + damBaseWidth + 40} y={GROUND_Y - tailwaterHeight - 12} fill="#fff" fontSize="10" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>{inputs.tailwaterDepth.toFixed(1)}m</text>
+                                </>
+                            )}
+
+                            <rect x="0" y={GROUND_Y} width={SVG_WIDTH} height={SVG_HEIGHT - GROUND_Y} fill="url(#groundGradient)" />
+
+                            <line x1={BASE_X} y1={GROUND_Y + 15} x2={BASE_X + damBaseWidth} y2={GROUND_Y + 15} stroke="#dec55b" strokeWidth="2" />
+                            <line x1={BASE_X} y1={GROUND_Y + 10} x2={BASE_X} y2={GROUND_Y + 20} stroke="#dec55b" strokeWidth="2" />
+                            <line x1={BASE_X + damBaseWidth} y1={GROUND_Y + 10} x2={BASE_X + damBaseWidth} y2={GROUND_Y + 20} stroke="#dec55b" strokeWidth="2" />
+                            <circle cx={BASE_X + damBaseWidth} cy={GROUND_Y + 15} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2" style={{ cursor: 'ew-resize' }} onMouseDown={() => handleMouseDown('damBaseWidth')} />
+                            <text x={BASE_X + damBaseWidth / 2} y={GROUND_Y + 35} fill="#dec55b" fontSize="11" fontWeight="bold" textAnchor="middle" style={{ pointerEvents: 'none', userSelect: 'none' }}>Wb={inputs.damBaseWidth.toFixed(1)}m</text>
+
+                            {results && (
+                                <>
+                                    <defs>
+                                        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                                            <polygon points="0 0, 10 3, 0 6" fill="#821307" />
+                                        </marker>
+                                        <marker id="arrowheadGreen" markerWidth="10" markerHeight="10" refX="5" refY="9" orient="auto">
+                                            <polygon points="0 0, 5 10, 10 0" fill="#59854e" />
+                                        </marker>
+                                    </defs>
+                                    <line x1={BASE_X - 30} y1={GROUND_Y - waterHeight / 3} x2={BASE_X - 5} y2={GROUND_Y - waterHeight / 3} stroke="#821307" strokeWidth="3" markerEnd="url(#arrowhead)" />
+                                    <text x={BASE_X - 35} y={GROUND_Y - waterHeight / 3 - 8} fill="#821307" fontSize="10" fontWeight="bold" textAnchor="end" style={{ pointerEvents: 'none', userSelect: 'none' }}>F_h</text>
+                                    <line x1={BASE_X + damBaseWidth / 3} y1={GROUND_Y - damHeight - 20} x2={BASE_X + damBaseWidth / 3} y2={GROUND_Y - damHeight - 5} stroke="#59854e" strokeWidth="3" markerEnd="url(#arrowheadGreen)" />
+                                    <text x={BASE_X + damBaseWidth / 3 + 10} y={GROUND_Y - damHeight - 25} fill="#59854e" fontSize="10" fontWeight="bold" style={{ pointerEvents: 'none', userSelect: 'none' }}>W</text>
+                                </>
+                            )}
+
+                            <defs>
+                                <linearGradient id="skyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stopColor="#c0d4fd" />
+                                    <stop offset="100%" stopColor="#dce6f5" />
+                                </linearGradient>
+                                <linearGradient id="waterGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stopColor="#7e8dab" />
+                                    <stop offset="100%" stopColor="#4d535a" />
+                                </linearGradient>
+                                <linearGradient id="concreteGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#a5a5a8" />
+                                    <stop offset="50%" stopColor="#e2e0da" />
+                                    <stop offset="100%" stopColor="#a5a5a8" />
+                                </linearGradient>
+                                <linearGradient id="groundGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stopColor="#4d535a" />
+                                    <stop offset="100%" stopColor="#3a3a3a" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
+                        <div style={{
+                            background: '#fff', borderRadius: '8px', border: '1px solid #e2e0da',
+                            padding: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                        }}>
+                            <h2 style={{
+                                margin: '0 0 1.5rem 0', fontSize: '1.3rem', color: '#000',
+                                borderBottom: '3px solid #dec55b', paddingBottom: '0.5rem', letterSpacing: '0.02em',
+                            }}>INPUT PARAMETERS</h2>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+                                {[
+                                    { label: 'Dam Height (m)', field: 'damHeight', min: 5, max: 100 },
+                                    { label: 'Dam Top Width (m)', field: 'damTopWidth', min: 1, max: 50 },
+                                    { label: 'Dam Base Width (m)', field: 'damBaseWidth', min: 3, max: 80 },
+                                    { label: 'Upstream Water Depth (m)', field: 'waterDepth', min: 0, max: 100 },
+                                    { label: 'Tailwater Depth (m)', field: 'tailwaterDepth', min: 0, max: 50 },
+                                    { label: 'Concrete Density (kg/m³)', field: 'concreteDensity', min: 2200, max: 2600 },
+                                    { label: 'Water Density (kg/m³)', field: 'waterDensity', min: 950, max: 1050 },
+                                    { label: 'Uplift Reduction Factor', field: 'upliftReduction', min: 0, max: 1, step: 0.1 },
+                                    { label: 'Friction Coefficient', field: 'frictionCoeff', min: 0.5, max: 1.0, step: 0.05 },
+                                ].map(({ label, field, min, max, step = 1 }) => (
+                                    <div key={field}>
+                                        <label style={{ display: 'block', fontSize: '0.85rem', color: '#4d535a', marginBottom: '0.4rem', fontWeight: '600' }}>{label}</label>
+                                        <input type="number" value={inputs[field]} onChange={(e) => handleInputChange(field, e.target.value)}
+                                            min={min} max={max} step={step}
+                                            style={{
+                                                width: '100%', padding: '0.7rem', background: '#f5f4f0',
+                                                border: '1px solid #e2e0da', borderRadius: '4px', color: '#000',
+                                                fontSize: '1rem', fontFamily: 'inherit', transition: 'all 0.2s', boxSizing: 'border-box',
+                                            }}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <GravityResultsPanel results={results} />
+                    </div>
+                </div>
+            );
+        }
+
+        function GravityResultsPanel({ results }) {
+            return (
+                <div style={{
+                    background: '#fff', borderRadius: '8px', border: '1px solid #e2e0da',
+                    padding: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                }}>
+                    <h2 style={{
+                        margin: '0 0 1.5rem 0', fontSize: '1.3rem', color: '#000',
+                        borderBottom: '3px solid #dec55b', paddingBottom: '0.5rem', letterSpacing: '0.02em',
+                    }}>ANALYSIS RESULTS</h2>
+
+                    {results && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <div style={{
+                                padding: '1rem',
+                                background: results.overallPass ? 'rgba(89, 133, 78, 0.1)' : 'rgba(130, 19, 7, 0.08)',
+                                border: `2px solid ${results.overallPass ? '#59854e' : '#821307'}`,
+                                borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.8rem',
+                            }}>
+                                {results.overallPass ? <CheckCircle2 size={28} color="#59854e" /> : <AlertCircle size={28} color="#821307" />}
+                                <div>
+                                    <div style={{ fontWeight: '700', fontSize: '1.1rem', color: '#000' }}>
+                                        {results.overallPass ? 'STABLE' : 'UNSTABLE'}
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem', color: '#4d535a', marginTop: '0.2rem' }}>
+                                        {results.overallPass ? 'Dam meets NVE safety criteria' : 'Dam does not meet safety requirements'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 style={{ fontSize: '1rem', color: '#a4852f', margin: '0 0 0.8rem 0', letterSpacing: '0.02em', fontWeight: '700' }}>FORCES (kN/m)</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                    <ResultRow label="Self Weight" value={results.selfWeight.toFixed(1)} />
+                                    <ResultRow label="Upstream Pressure" value={results.upstreamPressure.toFixed(1)} />
+                                    <ResultRow label="Downstream Pressure" value={results.downstreamPressure.toFixed(1)} />
+                                    <ResultRow label="Net Horizontal Force" value={results.netHorizontalForce.toFixed(1)} />
+                                    <ResultRow label="Uplift Force" value={results.upliftForce.toFixed(1)} />
+                                    <ResultRow label="Effective Vertical" value={results.effectiveVerticalForce.toFixed(1)} />
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 style={{ fontSize: '1rem', color: '#a4852f', margin: '0 0 0.8rem 0', letterSpacing: '0.02em', fontWeight: '700' }}>SAFETY FACTORS</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                    <SafetyRow label="Sliding Safety Factor" value={results.slidingSafetyFactor.toFixed(2)} required="≥ 1.5" pass={results.slidingPass} />
+                                    <SafetyRow label="Overturning Factor" value={results.overturningFactor.toFixed(2)} required="≥ 1.5" pass={results.overturningPass} />
+                                </div>
+                            </div>
+
+                            <div>
+                                <h3 style={{ fontSize: '1rem', color: '#a4852f', margin: '0 0 0.8rem 0', letterSpacing: '0.02em', fontWeight: '700' }}>BASE STRESSES (kPa)</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                    <ResultRow label="Maximum Stress" value={results.maxStress.toFixed(1)} />
+                                    <SafetyRow label="Minimum Stress" value={results.minStress.toFixed(1)} required="≥ 0 (no tension)" pass={results.tensionPass} />
+                                    <ResultRow label="Eccentricity" value={`${results.eccentricity.toFixed(2)} m`} />
+                                </div>
+                            </div>
+
+                            <div style={{
+                                padding: '1rem', background: '#f5f4f0', border: '1px solid #e2e0da',
+                                borderRadius: '4px', fontSize: '0.8rem', color: '#4d535a', display: 'flex', gap: '0.6rem',
+                            }}>
+                                <Info size={18} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+                                <div>
+                                    Analysis based on simplified 2D gravity dam model with trapezoidal cross-section.
+                                    For detailed design, consult NVE regulations and perform comprehensive finite element analysis.
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        /* ============================================================
+           Bishop's Simplified Method — Calculation Engine
+           ============================================================ */
+
+        function getEmbankmentHeight(x, height, crestWidth, usSlope, dsSlope) {
+            // Embankment cross-section: upstream toe at x=0, base at y=0, crest at y=height
+            // Upstream slope: rise over run = height / (usSlope * height) → toe at x=0, crest starts at x = usSlope * height
+            const usToeX = 0;
+            const usCrestX = usSlope * height;
+            const dsCrestX = usCrestX + crestWidth;
+            const dsToeX = dsCrestX + dsSlope * height;
+
+            if (x <= usToeX || x >= dsToeX) return 0;
+            if (x >= usCrestX && x <= dsCrestX) return height;
+            if (x < usCrestX) return height * (x - usToeX) / (usCrestX - usToeX);
+            // downstream slope
+            return height * (dsToeX - x) / (dsToeX - dsCrestX);
+        }
+
+        function calculateBishopFoS(params) {
+            const {
+                height, crestWidth, usSlope, dsSlope,
+                waterLevel, unitWeight, satUnitWeight,
+                cohesion, frictionAngle, circleX, circleY, radius, numSlices,
+            } = params;
+
+            const phi = frictionAngle * Math.PI / 180;
+            const tanPhi = Math.tan(phi);
+            const waterDensity = 9.81; // kN/m³ (unit weight of water)
+
+            // Embankment geometry key x-coordinates
+            const usToeX = 0;
+            const usCrestX = usSlope * height;
+            const dsCrestX = usCrestX + crestWidth;
+            const dsToeX = dsCrestX + dsSlope * height;
+
+            // Find where circle intersects ground level (y=0)
+            // Circle: (x - cx)² + (y - cy)² = r²
+            // At y=0: (x - cx)² + cy² = r²  →  x = cx ± sqrt(r² - cy²)
+            const disc = radius * radius - circleY * circleY;
+            if (disc < 0) {
+                return { error: 'Slip circle does not intersect the ground level. Adjust center Y or radius.' };
+            }
+            const sqrtDisc = Math.sqrt(disc);
+            const xLeft = circleX - sqrtDisc;
+            const xRight = circleX + sqrtDisc;
+
+            // Validate that the slip circle intersects the embankment
+            if (xRight <= usToeX || xLeft >= dsToeX) {
+                return { error: 'Slip circle is entirely outside the embankment footprint.' };
+            }
+
+            // Clamp intersection to embankment footprint for meaningful analysis
+            const xStart = Math.max(xLeft, usToeX);
+            const xEnd = Math.min(xRight, dsToeX);
+
+            if (xEnd - xStart < 0.1) {
+                return { error: 'Slip circle barely intersects the embankment. Increase radius or adjust center.' };
+            }
+
+            const sliceWidth = (xEnd - xStart) / numSlices;
+            let slices = [];
+
+            // Iterative Bishop's method
+            let FoS = 1.5; // initial guess
+            let converged = false;
+            let iterations = 0;
+            const maxIter = 100;
+            const tol = 0.001;
+
+            for (let iter = 0; iter < maxIter; iter++) {
+                iterations = iter + 1;
+                let sumNumerator = 0;
+                let sumDenominator = 0;
+                let sliceData = [];
+
+                for (let i = 0; i < numSlices; i++) {
+                    const xMid = xStart + (i + 0.5) * sliceWidth;
+                    const b = sliceWidth;
+
+                    // Surface height at slice center
+                    const hSurface = getEmbankmentHeight(xMid, height, crestWidth, usSlope, dsSlope);
+
+                    // Circle base height at slice center: y = cy - sqrt(r² - (x-cx)²)
+                    const dx = xMid - circleX;
+                    const rSq = radius * radius - dx * dx;
+                    if (rSq < 0) continue; // slice outside circle
+                    const yBase = circleY - Math.sqrt(rSq);
+
+                    // Slice height: from circle base to surface (or ground if surface is 0)
+                    const sliceTop = Math.max(hSurface, 0);
+                    const sliceBottom = Math.max(yBase, 0);
+                    const sliceH = sliceTop - sliceBottom;
+                    if (sliceH <= 0) continue;
+
+                    // Base angle: α = arcsin((xMid - circleX) / radius)
+                    const sinAlpha = (xMid - circleX) / radius;
+                    const alpha = Math.asin(Math.max(-1, Math.min(1, sinAlpha)));
+                    const cosAlpha = Math.cos(alpha);
+
+                    // Determine if slice is submerged
+                    // Water level is measured from base; phreatic surface on upstream side
+                    // Simple assumption: water fills from upstream to a point determined by waterLevel
+                    const waterSurfaceAtX = (() => {
+                        // Phreatic line: from water level on upstream face down to downstream toe
+                        // Upstream face intersection with water level
+                        if (waterLevel <= 0) return 0;
+                        const waterIntX = (waterLevel / height) * usSlope * height; // x where water meets upstream face
+                        if (xMid <= waterIntX) {
+                            return Math.min(waterLevel, hSurface);
+                        }
+                        // Linear phreatic from (waterIntX, waterLevel) to (dsToeX, 0)
+                        if (xMid >= dsToeX) return 0;
+                        const frac = (xMid - waterIntX) / (dsToeX - waterIntX);
+                        return Math.max(0, Math.min(waterLevel * (1 - frac), hSurface));
+                    })();
+
+                    // Pore water pressure at base of slice
+                    const hw = Math.max(0, waterSurfaceAtX - sliceBottom);
+                    const u = hw * waterDensity;
+
+                    // Weight: use saturated unit weight below water, moist above
+                    const submergedH = Math.min(Math.max(waterSurfaceAtX - sliceBottom, 0), sliceH);
+                    const dryH = sliceH - submergedH;
+                    const W = (dryH * unitWeight + submergedH * satUnitWeight) * b;
+
+                    // m_alpha factor
+                    const mAlpha = cosAlpha + (sinAlpha * tanPhi) / FoS;
+
+                    // Guard against m_alpha near zero
+                    if (Math.abs(mAlpha) < 0.01) {
+                        sliceData.push({
+                            index: i + 1, xMid, b, sliceH, alpha: alpha * 180 / Math.PI,
+                            W, u, mAlpha, N: NaN, warning: 'm_alpha near zero',
+                        });
+                        continue;
+                    }
+
+                    const numerator = (cohesion * b + (W - u * b) * tanPhi) / mAlpha;
+                    const denominator = W * sinAlpha;
+
+                    sumNumerator += numerator;
+                    sumDenominator += denominator;
+
+                    const N = (W - u * b * cosAlpha - (cohesion * b * sinAlpha) / FoS) / mAlpha;
+
+                    sliceData.push({
+                        index: i + 1, xMid: +xMid.toFixed(2), b: +b.toFixed(2),
+                        sliceH: +sliceH.toFixed(2), alpha: +(alpha * 180 / Math.PI).toFixed(2),
+                        W: +W.toFixed(2), u: +u.toFixed(2), mAlpha: +mAlpha.toFixed(4), N: +N.toFixed(2),
+                    });
+                }
+
+                if (sumDenominator <= 0) {
+                    return {
+                        error: 'Invalid slip surface: net driving moment is zero or negative. The slip circle may not produce a meaningful failure mechanism.',
+                        slices: sliceData, iterations,
+                    };
+                }
+
+                const newFoS = sumNumerator / sumDenominator;
+
+                if (newFoS < 0 || !isFinite(newFoS)) {
+                    return { error: 'Calculation diverged. Try different slip circle parameters.', slices: sliceData, iterations };
+                }
+
+                if (Math.abs(newFoS - FoS) < tol) {
+                    converged = true;
+                    FoS = newFoS;
+                    slices = sliceData;
+                    break;
+                }
+                FoS = newFoS;
+                slices = sliceData;
+            }
+
+            return {
+                FoS, slices, converged, iterations,
+                xLeft, xRight, xStart, xEnd,
+                pass: FoS >= 1.5,
+            };
+        }
+
+        /* ============================================================
+           Embankment Dam View
+           ============================================================ */
+
+        function EmbankmentDamView() {
+            const [inputs, setInputs] = useState({
+                height: 20, crestWidth: 5, usSlope: 3.0, dsSlope: 2.5,
+                waterLevel: 18,
+                unitWeight: 20, satUnitWeight: 22, cohesion: 10, frictionAngle: 30,
+                circleX: -5, circleY: 25, radius: 30, numSlices: 10,
+            });
+
+            const [results, setResults] = useState(null);
+            const [dragging, setDragging] = useState(null);
+            const [showSliceTable, setShowSliceTable] = useState(false);
+            const svgRef = useRef(null);
+
+            const geom = (() => {
+                const { height, crestWidth, usSlope, dsSlope } = inputs;
+                const usToeX = 0;
+                const usCrestX = usSlope * height;
+                const dsCrestX = usCrestX + crestWidth;
+                const dsToeX = dsCrestX + dsSlope * height;
+                return { usToeX, usCrestX, dsCrestX, dsToeX };
+            })();
+
+            useEffect(() => {
+                const r = calculateBishopFoS(inputs);
+                setResults(r);
+            }, [inputs]);
+
+            const handleInputChange = (field, value) => {
+                setInputs(prev => ({ ...prev, [field]: parseFloat(value) || 0 }));
+            };
+
+            // --- SVG dimensions and scaling ---
+            const SVG_WIDTH = 700;
+            const SVG_HEIGHT = 420;
+            const MARGIN = { left: 60, right: 60, top: 60, bottom: 60 };
+            const plotW = SVG_WIDTH - MARGIN.left - MARGIN.right;
+            const plotH = SVG_HEIGHT - MARGIN.top - MARGIN.bottom;
+
+            // World bounds: show full embankment + some extra for circle
+            const worldLeft = Math.min(geom.usToeX, inputs.circleX - inputs.radius) - 5;
+            const worldRight = Math.max(geom.dsToeX, inputs.circleX + inputs.radius) + 5;
+            const worldBottom = -5;
+            const worldTop = Math.max(inputs.height, inputs.circleY + inputs.radius * 0.3) + 5;
+            const worldW = worldRight - worldLeft;
+            const worldH = worldTop - worldBottom;
+
+            const scaleUniform = Math.min(plotW / worldW, plotH / worldH);
+
+            const toSvgX = (wx) => MARGIN.left + (wx - worldLeft) * scaleUniform;
+            const toSvgY = (wy) => MARGIN.top + (worldTop - wy) * scaleUniform;
+            const fromSvgX = (sx) => worldLeft + (sx - MARGIN.left) / scaleUniform;
+            const fromSvgY = (sy) => worldTop - (sy - MARGIN.top) / scaleUniform;
+
+            // --- Drag handling ---
+            const handleMouseDown = (dragType) => setDragging(dragType);
+            const handleMouseMove = (e) => {
+                if (!dragging || !svgRef.current) return;
+                const rect = svgRef.current.getBoundingClientRect();
+                const sx = e.clientX - rect.left;
+                const sy = e.clientY - rect.top;
+                const wx = fromSvgX(sx);
+                const wy = fromSvgY(sy);
+
+                if (dragging === 'circleCenter') {
+                    setInputs(prev => ({ ...prev, circleX: +wx.toFixed(1), circleY: Math.max(0, +wy.toFixed(1)) }));
+                } else if (dragging === 'circleRadius') {
+                    const dx = wx - inputs.circleX;
+                    const dy = wy - inputs.circleY;
+                    const newR = Math.max(5, Math.sqrt(dx * dx + dy * dy));
+                    setInputs(prev => ({ ...prev, radius: +newR.toFixed(1) }));
+                } else if (dragging === 'waterLevel') {
+                    const newWL = Math.max(0, Math.min(inputs.height, wy));
+                    setInputs(prev => ({ ...prev, waterLevel: +newWL.toFixed(1) }));
+                }
+            };
+            const handleMouseUp = () => setDragging(null);
+
+            useEffect(() => {
+                if (dragging) {
+                    window.addEventListener('mousemove', handleMouseMove);
+                    window.addEventListener('mouseup', handleMouseUp);
+                    return () => {
+                        window.removeEventListener('mousemove', handleMouseMove);
+                        window.removeEventListener('mouseup', handleMouseUp);
+                    };
+                }
+            }, [dragging, inputs]);
+
+            // --- Build SVG paths ---
+            const { height, crestWidth, usSlope, dsSlope, waterLevel, circleX, circleY, radius } = inputs;
+
+            // Embankment polygon
+            const embPoly = [
+                [geom.usToeX, 0],
+                [geom.usCrestX, height],
+                [geom.dsCrestX, height],
+                [geom.dsToeX, 0],
+            ].map(([x, y]) => `${toSvgX(x)},${toSvgY(y)}`).join(' ');
+
+            // Water body polygon (upstream side)
+            const waterIntX = waterLevel > 0 ? (waterLevel / height) * geom.usCrestX : 0;
+            const waterPoly = waterLevel > 0 ? [
+                [geom.usToeX, 0],
+                [waterIntX, waterLevel],
+                [geom.usToeX - 3, waterLevel], // extend left a bit to show reservoir
+                [geom.usToeX - 3, 0],
+            ].map(([x, y]) => `${toSvgX(x)},${toSvgY(y)}`).join(' ') : '';
+
+            // Slip circle arc
+            const buildArcPath = () => {
+                if (!results || results.error) return '';
+                const { xStart, xEnd } = results;
+                const steps = 60;
+                let path = '';
+                for (let i = 0; i <= steps; i++) {
+                    const x = xStart + (xEnd - xStart) * (i / steps);
+                    const dx = x - circleX;
+                    const rSq = radius * radius - dx * dx;
+                    if (rSq < 0) continue;
+                    const y = circleY - Math.sqrt(rSq);
+                    const sx = toSvgX(x);
+                    const sy = toSvgY(y);
+                    path += (path === '' ? 'M' : 'L') + `${sx},${sy}`;
+                }
+                return path;
+            };
+
+            // Slice division lines
+            const buildSliceLines = () => {
+                if (!results || results.error || !results.slices) return [];
+                const { xStart, xEnd } = results;
+                const n = inputs.numSlices;
+                const sw = (xEnd - xStart) / n;
+                let lines = [];
+                for (let i = 0; i <= n; i++) {
+                    const x = xStart + i * sw;
+                    const hSurf = getEmbankmentHeight(x, height, crestWidth, usSlope, dsSlope);
+                    const dx = x - circleX;
+                    const rSq = radius * radius - dx * dx;
+                    if (rSq < 0) continue;
+                    const yBase = circleY - Math.sqrt(rSq);
+                    lines.push({
+                        x1: toSvgX(x), y1: toSvgY(Math.max(hSurf, 0)),
+                        x2: toSvgX(x), y2: toSvgY(Math.max(yBase, 0)),
+                    });
+                }
+                return lines;
+            };
+
+            // Fill under slip arc
+            const buildArcFill = () => {
+                if (!results || results.error) return '';
+                const { xStart, xEnd } = results;
+                const steps = 60;
+                let pts = [];
+                for (let i = 0; i <= steps; i++) {
+                    const x = xStart + (xEnd - xStart) * (i / steps);
+                    const dx = x - circleX;
+                    const rSq = radius * radius - dx * dx;
+                    if (rSq < 0) continue;
+                    const y = circleY - Math.sqrt(rSq);
+                    pts.push([x, y]);
+                }
+                if (pts.length < 2) return '';
+                // close polygon along ground
+                let path = pts.map(([x, y], i) => (i === 0 ? 'M' : 'L') + `${toSvgX(x)},${toSvgY(y)}`).join('');
+                path += `L${toSvgX(pts[pts.length - 1][0])},${toSvgY(0)}`;
+                path += `L${toSvgX(pts[0][0])},${toSvgY(0)}Z`;
+                return path;
+            };
+
+            const arcPath = buildArcPath();
+            const arcFill = buildArcFill();
+            const sliceLines = buildSliceLines();
+            const isStable = results && !results.error && results.pass;
+
+            // Radius handle: point on arc at bottom (lowest point)
+            const radHandleX = circleX;
+            const radHandleY = circleY - radius;
+
+            // Water level handle: on upstream face at waterLevel
+            const wlHandleX = waterLevel > 0 ? waterIntX : geom.usToeX;
+
+            // CSV export
+            const exportCsv = () => {
+                if (!results || results.error) return;
+                let csv = "Embankment Dam Stability Analysis - Bishop's Simplified Method\n\n";
+                csv += "INPUT PARAMETERS\nParameter,Value,Unit\n";
+                csv += `Height,${inputs.height},m\n`;
+                csv += `Crest Width,${inputs.crestWidth},m\n`;
+                csv += `Upstream Slope (H:V),${inputs.usSlope},-\n`;
+                csv += `Downstream Slope (H:V),${inputs.dsSlope},-\n`;
+                csv += `Upstream Water Level,${inputs.waterLevel},m\n`;
+                csv += `Unit Weight,${inputs.unitWeight},kN/m³\n`;
+                csv += `Saturated Unit Weight,${inputs.satUnitWeight},kN/m³\n`;
+                csv += `Cohesion c',${inputs.cohesion},kPa\n`;
+                csv += `Friction Angle φ',${inputs.frictionAngle},°\n`;
+                csv += `Slip Circle Center X,${inputs.circleX},m\n`;
+                csv += `Slip Circle Center Y,${inputs.circleY},m\n`;
+                csv += `Slip Circle Radius,${inputs.radius},m\n`;
+                csv += `Number of Slices,${inputs.numSlices},-\n\n`;
+                csv += "RESULTS\nItem,Value\n";
+                csv += `Factor of Safety,${results.FoS.toFixed(4)}\n`;
+                csv += `Converged,${results.converged ? 'Yes' : 'No'}\n`;
+                csv += `Iterations,${results.iterations}\n`;
+                csv += `Status,${results.pass ? 'STABLE' : 'UNSTABLE'}\n\n`;
+                csv += "SLICE DATA\nSlice,X (m),Width (m),Height (m),Alpha (°),Weight (kN/m),Pore Pressure (kPa),m_alpha,Normal Force (kN/m)\n";
+                results.slices.forEach(s => {
+                    csv += `${s.index},${s.xMid},${s.b},${s.sliceH},${s.alpha},${s.W},${s.u},${s.mAlpha},${s.N}\n`;
+                });
+                csv += `\nAnalysis Date,${new Date().toLocaleString()}\n`;
+                csv += "Note: Analysis based on Bishop's Simplified Method for circular slip surfaces. For detailed design consult NVE regulations.\n";
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.setAttribute('href', URL.createObjectURL(blob));
+                link.setAttribute('download', `embankment_stability_${new Date().toISOString().split('T')[0]}.csv`);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            const inputGroups = [
+                {
+                    title: 'GEOMETRY',
+                    fields: [
+                        { label: 'Height (m)', field: 'height', min: 5, max: 100 },
+                        { label: 'Crest Width (m)', field: 'crestWidth', min: 1, max: 50 },
+                        { label: 'Upstream Slope H:V', field: 'usSlope', min: 1, max: 6, step: 0.1 },
+                        { label: 'Downstream Slope H:V', field: 'dsSlope', min: 1, max: 6, step: 0.1 },
+                    ],
+                },
+                {
+                    title: 'WATER',
+                    fields: [
+                        { label: 'Upstream Water Level (m)', field: 'waterLevel', min: 0, max: 100 },
+                    ],
+                },
+                {
+                    title: 'SOIL PROPERTIES',
+                    fields: [
+                        { label: 'Unit Weight (kN/m³)', field: 'unitWeight', min: 10, max: 30, step: 0.5 },
+                        { label: 'Saturated Unit Weight (kN/m³)', field: 'satUnitWeight', min: 10, max: 30, step: 0.5 },
+                        { label: "Cohesion c' (kPa)", field: 'cohesion', min: 0, max: 100 },
+                        { label: "Friction Angle φ' (°)", field: 'frictionAngle', min: 0, max: 45 },
+                    ],
+                },
+                {
+                    title: 'SLIP CIRCLE',
+                    fields: [
+                        { label: 'Center X (m)', field: 'circleX', min: -100, max: 200 },
+                        { label: 'Center Y (m)', field: 'circleY', min: 0, max: 200 },
+                        { label: 'Radius (m)', field: 'radius', min: 5, max: 200 },
+                        { label: 'Number of Slices', field: 'numSlices', min: 4, max: 50 },
+                    ],
+                },
+            ];
+
+            return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    {/* Visualization */}
+                    <div style={{
+                        background: '#fff', borderRadius: '8px', border: '1px solid #e2e0da',
+                        padding: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                            <h2 style={{
+                                margin: '0', fontSize: '1.3rem', color: '#000',
+                                borderBottom: '3px solid #dec55b', paddingBottom: '0.5rem',
+                                letterSpacing: '0.02em', flex: 1,
+                            }}>EMBANKMENT VISUALIZATION</h2>
+                            <button onClick={exportCsv} disabled={!results || !!results.error} style={{
+                                padding: '0.7rem 1.5rem',
+                                background: (results && !results.error) ? '#4d535a' : '#a5a5a8',
+                                color: '#fff', border: 'none', borderRadius: '9999px', fontSize: '0.9rem',
+                                fontWeight: '600', cursor: (results && !results.error) ? 'pointer' : 'not-allowed',
+                                transition: 'all 0.2s',
+                                boxShadow: (results && !results.error) ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
+                                fontFamily: 'inherit', letterSpacing: '0.02em',
+                            }}
+                            onMouseEnter={(e) => { if (results && !results.error) { e.target.style.background = '#000'; e.target.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)'; }}}
+                            onMouseLeave={(e) => { e.target.style.background = (results && !results.error) ? '#4d535a' : '#a5a5a8'; e.target.style.boxShadow = (results && !results.error) ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'; }}
+                            >Export to CSV</button>
+                        </div>
+                        <p style={{ fontSize: '0.85rem', color: '#4d535a', marginBottom: '1rem' }}>
+                            Drag gold handles to adjust slip circle center, radius, and water level
+                        </p>
+
+                        <svg ref={svgRef} width={SVG_WIDTH} height={SVG_HEIGHT} style={{
+                            background: 'linear-gradient(to bottom, #c0d4fd 0%, #dce6f5 100%)',
+                            borderRadius: '8px', border: '1px solid #e2e0da',
+                            cursor: dragging ? 'grabbing' : 'default', display: 'block', margin: '0 auto',
+                        }}>
+                            <defs>
+                                <linearGradient id="embSkyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stopColor="#c0d4fd" />
+                                    <stop offset="100%" stopColor="#dce6f5" />
+                                </linearGradient>
+                                <linearGradient id="embWaterGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stopColor="#7e8dab" />
+                                    <stop offset="100%" stopColor="#4d535a" />
+                                </linearGradient>
+                                <linearGradient id="embEarthGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stopColor="#a08050" />
+                                    <stop offset="40%" stopColor="#8B7355" />
+                                    <stop offset="100%" stopColor="#6b5335" />
+                                </linearGradient>
+                                <linearGradient id="embGroundGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stopColor="#4d535a" />
+                                    <stop offset="100%" stopColor="#3a3a3a" />
+                                </linearGradient>
+                            </defs>
+
+                            {/* Water body */}
+                            {waterLevel > 0 && (
+                                <polygon points={waterPoly} fill="url(#embWaterGrad)" opacity="0.6" />
+                            )}
+
+                            {/* Water surface line */}
+                            {waterLevel > 0 && (
+                                <line x1={toSvgX(geom.usToeX - 3)} y1={toSvgY(waterLevel)} x2={toSvgX(waterIntX)} y2={toSvgY(waterLevel)}
+                                    stroke="#8aa3b9" strokeWidth="2" strokeDasharray="5,5" />
+                            )}
+
+                            {/* Slip surface fill */}
+                            {arcFill && (
+                                <path d={arcFill} fill={isStable ? 'rgba(89,133,78,0.15)' : 'rgba(130,19,7,0.12)'} />
+                            )}
+
+                            {/* Embankment polygon */}
+                            <polygon points={embPoly} fill="url(#embEarthGrad)" stroke="#6b5335" strokeWidth="2" />
+
+                            {/* Ground */}
+                            <rect x={0} y={toSvgY(0)} width={SVG_WIDTH} height={SVG_HEIGHT - toSvgY(0)} fill="url(#embGroundGrad)" />
+
+                            {/* Slice lines */}
+                            {sliceLines.map((l, i) => (
+                                <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2}
+                                    stroke="rgba(0,0,0,0.3)" strokeWidth="1" strokeDasharray="3,3" />
+                            ))}
+
+                            {/* Slip circle arc */}
+                            {arcPath && (
+                                <path d={arcPath} fill="none" stroke="#c0392b" strokeWidth="2.5" strokeDasharray="8,4" />
+                            )}
+
+                            {/* Circle center marker */}
+                            <line x1={toSvgX(circleX) - 6} y1={toSvgY(circleY)} x2={toSvgX(circleX) + 6} y2={toSvgY(circleY)}
+                                stroke="#c0392b" strokeWidth="1.5" />
+                            <line x1={toSvgX(circleX)} y1={toSvgY(circleY) - 6} x2={toSvgX(circleX)} y2={toSvgY(circleY) + 6}
+                                stroke="#c0392b" strokeWidth="1.5" />
+
+                            {/* Drag handle: circle center */}
+                            <circle cx={toSvgX(circleX)} cy={toSvgY(circleY)} r="9" fill="#dec55b" stroke="#fff" strokeWidth="2"
+                                style={{ cursor: 'move' }} onMouseDown={() => handleMouseDown('circleCenter')} />
+                            <text x={toSvgX(circleX)} y={toSvgY(circleY) - 14} fill="#a4852f" fontSize="10" fontWeight="bold" textAnchor="middle"
+                                style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                Center ({inputs.circleX}, {inputs.circleY})
+                            </text>
+
+                            {/* Drag handle: radius (bottom of circle) */}
+                            <line x1={toSvgX(circleX)} y1={toSvgY(circleY)} x2={toSvgX(radHandleX)} y2={toSvgY(radHandleY)}
+                                stroke="#dec55b" strokeWidth="1.5" strokeDasharray="4,3" />
+                            <circle cx={toSvgX(radHandleX)} cy={toSvgY(radHandleY)} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2"
+                                style={{ cursor: 'ns-resize' }} onMouseDown={() => handleMouseDown('circleRadius')} />
+                            <text x={toSvgX(radHandleX) + 14} y={toSvgY(radHandleY) + 4} fill="#a4852f" fontSize="10" fontWeight="bold"
+                                style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                R={inputs.radius.toFixed(1)}
+                            </text>
+
+                            {/* Drag handle: water level */}
+                            {waterLevel > 0 && (
+                                <>
+                                    <circle cx={toSvgX(wlHandleX)} cy={toSvgY(waterLevel)} r="8" fill="#dec55b" stroke="#fff" strokeWidth="2"
+                                        style={{ cursor: 'ns-resize' }} onMouseDown={() => handleMouseDown('waterLevel')} />
+                                    <text x={toSvgX(wlHandleX) - 14} y={toSvgY(waterLevel) - 10} fill="#fff" fontSize="10" fontWeight="bold" textAnchor="end"
+                                        style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                        WL={inputs.waterLevel.toFixed(1)}m
+                                    </text>
+                                </>
+                            )}
+
+                            {/* FoS label on SVG */}
+                            {results && !results.error && (
+                                <text x={SVG_WIDTH - 15} y={25} fill={isStable ? '#59854e' : '#821307'} fontSize="14" fontWeight="bold" textAnchor="end"
+                                    style={{ pointerEvents: 'none', userSelect: 'none' }}>
+                                    FoS = {results.FoS.toFixed(3)}
+                                </text>
+                            )}
+                        </svg>
+                    </div>
+
+                    {/* Input + Results */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
+                        {/* Inputs panel */}
+                        <div style={{
+                            background: '#fff', borderRadius: '8px', border: '1px solid #e2e0da',
+                            padding: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                        }}>
+                            <h2 style={{
+                                margin: '0 0 1.5rem 0', fontSize: '1.3rem', color: '#000',
+                                borderBottom: '3px solid #dec55b', paddingBottom: '0.5rem', letterSpacing: '0.02em',
+                            }}>INPUT PARAMETERS</h2>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                                {inputGroups.map(group => (
+                                    <div key={group.title}>
+                                        <h3 style={{ fontSize: '0.85rem', color: '#a4852f', margin: '0 0 0.8rem 0', fontWeight: '700', letterSpacing: '0.05em' }}>
+                                            {group.title}
+                                        </h3>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+                                            {group.fields.map(({ label, field, min, max, step = 1 }) => (
+                                                <div key={field}>
+                                                    <label style={{ display: 'block', fontSize: '0.85rem', color: '#4d535a', marginBottom: '0.3rem', fontWeight: '600' }}>{label}</label>
+                                                    <input type="number" value={inputs[field]} onChange={(e) => handleInputChange(field, e.target.value)}
+                                                        min={min} max={max} step={step}
+                                                        style={{
+                                                            width: '100%', padding: '0.6rem', background: '#f5f4f0',
+                                                            border: '1px solid #e2e0da', borderRadius: '4px', color: '#000',
+                                                            fontSize: '0.95rem', fontFamily: 'inherit', boxSizing: 'border-box',
+                                                        }}
+                                                    />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Results panel */}
+                        <EmbankmentResultsPanel results={results} showSliceTable={showSliceTable} setShowSliceTable={setShowSliceTable} />
+                    </div>
+                </div>
+            );
+        }
+
+        /* ============================================================
+           Embankment Results Panel
+           ============================================================ */
+
+        function EmbankmentResultsPanel({ results, showSliceTable, setShowSliceTable }) {
+            return (
+                <div style={{
+                    background: '#fff', borderRadius: '8px', border: '1px solid #e2e0da',
+                    padding: '2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                }}>
+                    <h2 style={{
+                        margin: '0 0 1.5rem 0', fontSize: '1.3rem', color: '#000',
+                        borderBottom: '3px solid #dec55b', paddingBottom: '0.5rem', letterSpacing: '0.02em',
+                    }}>ANALYSIS RESULTS</h2>
+
+                    {results && results.error && (
+                        <div style={{
+                            padding: '1rem', background: 'rgba(130,19,7,0.08)',
+                            border: '2px solid #821307', borderRadius: '6px',
+                            display: 'flex', alignItems: 'center', gap: '0.8rem',
+                        }}>
+                            <AlertCircle size={28} color="#821307" />
+                            <div>
+                                <div style={{ fontWeight: '700', fontSize: '1.1rem', color: '#000' }}>ERROR</div>
+                                <div style={{ fontSize: '0.85rem', color: '#4d535a', marginTop: '0.2rem' }}>{results.error}</div>
+                            </div>
+                        </div>
+                    )}
+
+                    {results && !results.error && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            {/* Status banner */}
+                            <div style={{
+                                padding: '1rem',
+                                background: results.pass ? 'rgba(89,133,78,0.1)' : 'rgba(130,19,7,0.08)',
+                                border: `2px solid ${results.pass ? '#59854e' : '#821307'}`,
+                                borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '0.8rem',
+                            }}>
+                                {results.pass ? <CheckCircle2 size={28} color="#59854e" /> : <AlertCircle size={28} color="#821307" />}
+                                <div>
+                                    <div style={{ fontWeight: '700', fontSize: '1.1rem', color: '#000' }}>
+                                        {results.pass ? 'STABLE' : 'UNSTABLE'}
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem', color: '#4d535a', marginTop: '0.2rem' }}>
+                                        {results.pass ? 'Slope meets minimum FoS requirement' : 'Slope does not meet minimum FoS requirement'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Safety factor */}
+                            <div>
+                                <h3 style={{ fontSize: '1rem', color: '#a4852f', margin: '0 0 0.8rem 0', letterSpacing: '0.02em', fontWeight: '700' }}>FACTOR OF SAFETY</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                    <SafetyRow label="Bishop's Factor of Safety" value={results.FoS.toFixed(3)} required="≥ 1.5" pass={results.pass} />
+                                </div>
+                            </div>
+
+                            {/* Convergence */}
+                            <div>
+                                <h3 style={{ fontSize: '1rem', color: '#a4852f', margin: '0 0 0.8rem 0', letterSpacing: '0.02em', fontWeight: '700' }}>CONVERGENCE</h3>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                    <ResultRow label="Iterations" value={results.iterations} />
+                                    <ResultRow label="Converged" value={results.converged ? 'Yes' : 'No'} />
+                                    <ResultRow label="Active Slices" value={results.slices.length} />
+                                </div>
+                            </div>
+
+                            {/* Slice detail table (expandable) */}
+                            <div>
+                                <button onClick={() => setShowSliceTable(!showSliceTable)} style={{
+                                    padding: '0.6rem 1.2rem', background: '#f5f4f0', border: '1px solid #e2e0da',
+                                    borderRadius: '4px', fontSize: '0.85rem', fontWeight: '600', color: '#4d535a',
+                                    cursor: 'pointer', fontFamily: 'inherit', width: '100%', textAlign: 'left',
+                                }}>
+                                    {showSliceTable ? '▼' : '▶'} Slice Details ({results.slices.length} slices)
+                                </button>
+                                {showSliceTable && (
+                                    <div style={{ marginTop: '0.8rem', overflowX: 'auto' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                                            <thead>
+                                                <tr style={{ background: '#f5f4f0' }}>
+                                                    {['#', 'X (m)', 'b (m)', 'h (m)', 'α (°)', 'W (kN/m)', 'u (kPa)', 'm_α', 'N (kN/m)'].map(h => (
+                                                        <th key={h} style={{ padding: '0.4rem 0.5rem', textAlign: 'right', borderBottom: '2px solid #e2e0da', color: '#4d535a', fontWeight: '700' }}>{h}</th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {results.slices.map(s => (
+                                                    <tr key={s.index} style={{ borderBottom: '1px solid #f0efe9' }}>
+                                                        <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right', fontWeight: '600' }}>{s.index}</td>
+                                                        <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{s.xMid}</td>
+                                                        <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{s.b}</td>
+                                                        <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{s.sliceH}</td>
+                                                        <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{s.alpha}</td>
+                                                        <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{s.W}</td>
+                                                        <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{s.u}</td>
+                                                        <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{s.mAlpha}</td>
+                                                        <td style={{ padding: '0.3rem 0.5rem', textAlign: 'right' }}>{isNaN(s.N) ? 'ERR' : s.N}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Disclaimer */}
+                            <div style={{
+                                padding: '1rem', background: '#f5f4f0', border: '1px solid #e2e0da',
+                                borderRadius: '4px', fontSize: '0.8rem', color: '#4d535a', display: 'flex', gap: '0.6rem',
+                            }}>
+                                <Info size={18} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+                                <div>
+                                    Analysis based on Bishop's Simplified Method for circular slip surfaces with a linear phreatic
+                                    surface approximation. For detailed design, consult NVE regulations, consider multiple slip circles,
+                                    and perform comprehensive slope stability analysis.
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        /* ============================================================
+           Main App Shell with Tab System
+           ============================================================ */
+
+        function DamStabilityAnalyzer() {
+            const [analysisMode, setAnalysisMode] = useState('gravity');
+
+            const subtitle = analysisMode === 'gravity'
+                ? 'Norwegian Dam Safety Standard (NVE) · Gravity Dam Analysis'
+                : "Norwegian Dam Safety Standard (NVE) · Embankment Dam Slope Stability";
+
+            return (
+                <div style={{
+                    minHeight: '100vh', background: '#f5f4f0',
+                    fontFamily: '"Segoe UI", "Helvetica Neue", Arial, sans-serif',
+                    color: '#000', padding: '0', margin: '0',
+                }}>
+                    {/* Header */}
+                    <div style={{
+                        background: '#000', borderBottom: '4px solid #dec55b',
+                        padding: '1.5rem 2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                    }}>
+                        <h1 style={{ margin: '0', fontSize: '2rem', fontWeight: '700', letterSpacing: '0.02em', color: '#fff' }}>
+                            Dam Stability Analyzer
+                        </h1>
+                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#a5a5a8', letterSpacing: '0.02em' }}>
+                            {subtitle}
+                        </p>
+                    </div>
+
+                    {/* Tab Bar */}
+                    <div style={{
+                        maxWidth: '1400px', margin: '0 auto', padding: '1.5rem 2rem 0 2rem',
+                    }}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            {[
+                                { key: 'gravity', label: 'Gravity Dam' },
+                                { key: 'embankment', label: 'Embankment Dam' },
+                            ].map(tab => {
+                                const active = analysisMode === tab.key;
+                                return (
+                                    <button key={tab.key} onClick={() => setAnalysisMode(tab.key)} style={{
+                                        padding: '0.6rem 1.4rem',
+                                        background: active ? '#000' : '#fff',
+                                        color: active ? '#fff' : '#4d535a',
+                                        border: active ? '2px solid #000' : '2px solid #e2e0da',
+                                        borderRadius: '9999px',
+                                        fontSize: '0.9rem',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        fontFamily: 'inherit',
+                                        letterSpacing: '0.02em',
+                                        transition: 'all 0.2s',
+                                    }}>
+                                        {tab.label}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Content */}
+                    <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '1.5rem 2rem 2rem 2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                        {analysisMode === 'gravity' ? <GravityDamView /> : <EmbankmentDamView />}
                     </div>
                 </div>
             );
